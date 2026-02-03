@@ -3,12 +3,12 @@ import { Package, MapPin, Phone, Mail, Instagram, Twitter, Facebook } from "luci
 
 const footerLinks = {
   layanan: [
-    { name: "Titip Beli", href: "/layanan/titip-beli" },
-    { name: "Kirim Barang", href: "/layanan/kirim-barang" },
+    { name: "Titip Beli", href: "/order/new" },
+    { name: "Kirim Barang", href: "/order/new" },
     { name: "Jadi Traveler", href: "/daftar-traveler" },
   ],
   perusahaan: [
-    { name: "Tentang Kami", href: "/tentang" },
+    { name: "Tentang Kami", href: "/cara-kerja" },
     { name: "Cara Kerja", href: "/cara-kerja" },
     { name: "FAQ", href: "/faq" },
     { name: "Kontak", href: "/kontak" },
@@ -38,24 +38,24 @@ export function Footer() {
               Platform jasa titip & logistik berbasis traveler. Sekalian jalan, nitip barang!
             </p>
             <div className="flex gap-3">
-              <a
-                href="#"
+              <Link
+                to="/social/instagram"
                 className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted hover:bg-primary hover:text-primary-foreground transition-colors"
               >
                 <Instagram className="h-4 w-4" />
-              </a>
-              <a
-                href="#"
+              </Link>
+              <Link
+                to="/social/twitter"
                 className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted hover:bg-primary hover:text-primary-foreground transition-colors"
               >
                 <Twitter className="h-4 w-4" />
-              </a>
-              <a
-                href="#"
+              </Link>
+              <Link
+                to="/social/facebook"
                 className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted hover:bg-primary hover:text-primary-foreground transition-colors"
               >
                 <Facebook className="h-4 w-4" />
-              </a>
+              </Link>
             </div>
           </div>
 
