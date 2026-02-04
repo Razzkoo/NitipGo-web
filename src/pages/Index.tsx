@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowRight, MapPin, Package, Shield, Clock, Star, Users, TrendingUp } from "lucide-react";
+import { motion, Variants } from "framer-motion";
+import { ArrowRight, MapPin, Package, Shield, Clock, Star, Users, TrendingUp, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { CountUp } from "@/components/ui/CountUp";
 import heroImage from "@/assets/hero-illustration.png";
 
 // Mock data for available trips
@@ -75,102 +76,181 @@ const howItWorksTraveler = [
 ];
 
 const stats = [
-  { value: "50K+", label: "Customer Puas" },
-  { value: "10K+", label: "Mitra Traveler" },
-  { value: "100+", label: "Kota Terjangkau" },
-  { value: "4.9", label: "Rating Rata-rata" },
+  { value: 50, suffix: "K+", label: "Customer Puas" },
+  { value: 10, suffix: "K+", label: "Mitra Traveler" },
+  { value: 100, suffix: "+", label: "Kota Terjangkau" },
+  { value: 4.9, decimals: 1, label: "Rating Rata-rata" },
 ];
+
+// Animation variants with proper typing
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.15,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: {
+    opacity: 1,
+    y: 0,
+  },
+};
 
 export default function Index() {
   return (
     <MainLayout>
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-hero">
-        <div className="container py-16 md:py-24 lg:py-32">
+        {/* Background decoration */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-primary/5 blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-accent/5 blur-3xl" />
+        </div>
+
+        <div className="container relative py-16 md:py-24 lg:py-32">
           <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
               className="space-y-6"
             >
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
-                <Package className="h-4 w-4" />
-                <span>Sekalian Jalan, Nitip Barang!</span>
-              </div>
-              <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+              <motion.div variants={itemVariants}>
+                <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
+                  <Sparkles className="h-4 w-4" />
+                  <span>Sekalian Jalan, Nitip Barang!</span>
+                </div>
+              </motion.div>
+
+              <motion.h1 
+                variants={itemVariants}
+                className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl"
+              >
                 Kirim Barang <span className="text-gradient-primary">Lebih Mudah</span> dengan Traveler
-              </h1>
-              <p className="max-w-lg text-lg text-muted-foreground">
+              </motion.h1>
+
+              <motion.p 
+                variants={itemVariants}
+                className="max-w-lg text-lg text-muted-foreground"
+              >
                 NitipGo mempertemukan Anda dengan traveler yang sedang bepergian ke kota tujuan. 
                 Hemat biaya, cepat sampai, dan aman terpercaya.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <Button variant="hero" size="lg" asChild>
+              </motion.p>
+
+              <motion.div 
+                variants={itemVariants}
+                className="flex flex-wrap gap-4"
+              >
+                <Button 
+                  variant="hero" 
+                  size="lg" 
+                  asChild 
+                  className="group shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30"
+                >
                   <Link to="/register">
-                    Mulai Sekarang <ArrowRight className="ml-1 h-5 w-5" />
+                    Mulai Sekarang 
+                    <ArrowRight className="ml-1 h-5 w-5 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </Button>
                 <Button variant="outline" size="lg" asChild>
                   <Link to="/cara-kerja">Pelajari Lebih Lanjut</Link>
                 </Button>
-              </div>
-              {/* Stats */}
-              <div className="flex flex-wrap gap-6 pt-4">
+              </motion.div>
+
+              {/* Stats with count-up animation */}
+              <motion.div 
+                variants={itemVariants}
+                className="flex flex-wrap gap-6 pt-4"
+              >
                 {stats.map((stat, i) => (
                   <div key={i} className="text-center">
-                    <p className="text-2xl font-bold text-primary">{stat.value}</p>
+                    <p className="text-2xl font-bold text-primary">
+                      <CountUp 
+                        end={stat.value} 
+                        suffix={stat.suffix || ""} 
+                        decimals={stat.decimals || 0}
+                        duration={2000}
+                      />
+                    </p>
                     <p className="text-sm text-muted-foreground">{stat.label}</p>
                   </div>
                 ))}
-              </div>
+              </motion.div>
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+              transition={{ duration: 0.7, delay: 0.3 }}
               className="relative"
             >
-              <div className="relative overflow-hidden rounded-2xl shadow-2xl">
+              {/* Main Hero Image with float animation */}
+              <motion.div
+                animate={{ y: [0, -15, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                className="relative overflow-hidden rounded-2xl shadow-2xl"
+              >
                 <img
                   src={heroImage}
                   alt="NitipGo - Traveler membawa paket"
                   className="w-full h-auto"
                 />
-              </div>
-              {/* Floating cards */}
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
-                className="absolute -left-4 bottom-8 hidden rounded-xl bg-card p-4 shadow-card-hover md:block"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/20">
-                    <Shield className="h-5 w-5 text-success" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">100% Aman</p>
-                    <p className="text-xs text-muted-foreground">Garansi uang kembali</p>
-                  </div>
-                </div>
+                {/* Glow effect */}
+                <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent" />
               </motion.div>
+
+              {/* Floating card - left */}
               <motion.div
-                initial={{ opacity: 0, x: 20 }}
+                initial={{ opacity: 0, x: -40 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.7 }}
-                className="absolute -right-4 top-8 hidden rounded-xl bg-card p-4 shadow-card-hover md:block"
+                transition={{ duration: 0.6, delay: 0.8 }}
+                className="absolute -left-4 bottom-8 hidden md:block"
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/20">
-                    <TrendingUp className="h-5 w-5 text-accent" />
+                <motion.div 
+                  animate={{ y: [0, -10, 0] }}
+                  transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                  className="rounded-xl bg-card p-4 shadow-card-hover backdrop-blur-sm border border-border/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/20">
+                      <Shield className="h-5 w-5 text-success" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">100% Aman</p>
+                      <p className="text-xs text-muted-foreground">Garansi uang kembali</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold">Hemat 50%</p>
-                    <p className="text-xs text-muted-foreground">Dari ekspedisi biasa</p>
+                </motion.div>
+              </motion.div>
+
+              {/* Floating card - right */}
+              <motion.div
+                initial={{ opacity: 0, x: 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 1 }}
+                className="absolute -right-4 top-8 hidden md:block"
+              >
+                <motion.div 
+                  animate={{ y: [0, -12, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                  className="rounded-xl bg-card p-4 shadow-card-hover backdrop-blur-sm border border-border/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/20">
+                      <TrendingUp className="h-5 w-5 text-accent" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Hemat 50%</p>
+                      <p className="text-xs text-muted-foreground">Dari ekspedisi biasa</p>
+                    </div>
                   </div>
-                </div>
+                </motion.div>
               </motion.div>
             </motion.div>
           </div>
@@ -180,28 +260,37 @@ export default function Index() {
       {/* Features Section */}
       <section className="py-16 md:py-24">
         <div className="container">
-          <div className="text-center mb-12">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
             <h2 className="text-3xl font-bold text-foreground md:text-4xl">
               Kenapa Pilih <span className="text-primary">NitipGo</span>?
             </h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
               Platform jasa titip yang menghubungkan Anda dengan traveler terpercaya
             </p>
-          </div>
+          </motion.div>
 
           <div className="grid gap-6 md:grid-cols-3">
             {features.map((feature, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="group rounded-2xl bg-card p-6 shadow-card transition-all hover:shadow-card-hover"
+                transition={{ duration: 0.5, delay: i * 0.15 }}
+                whileHover={{ y: -8, transition: { duration: 0.2 } }}
+                className="group rounded-2xl bg-card p-6 shadow-card transition-shadow duration-300 hover:shadow-card-hover"
               >
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary">
-                  <feature.icon className="h-7 w-7 text-primary transition-colors group-hover:text-primary-foreground" />
-                </div>
+                <motion.div 
+                  className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 transition-colors duration-300 group-hover:bg-primary"
+                  whileHover={{ scale: 1.05 }}
+                >
+                  <feature.icon className="h-7 w-7 text-primary transition-colors duration-300 group-hover:text-primary-foreground" />
+                </motion.div>
                 <h3 className="mb-2 text-xl font-semibold text-foreground">{feature.title}</h3>
                 <p className="text-muted-foreground">{feature.description}</p>
               </motion.div>
@@ -213,15 +302,26 @@ export default function Index() {
       {/* How It Works Section */}
       <section className="bg-muted/50 py-16 md:py-24">
         <div className="container">
-          <div className="text-center mb-12">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
             <h2 className="text-3xl font-bold text-foreground md:text-4xl">
               Cara Kerja <span className="text-primary">NitipGo</span>
             </h2>
-          </div>
+          </motion.div>
 
           <div className="grid gap-12 lg:grid-cols-2">
             {/* Customer Flow */}
-            <div className="rounded-2xl bg-card p-6 shadow-card md:p-8">
+            <motion.div 
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="rounded-2xl bg-card p-6 shadow-card md:p-8"
+            >
               <div className="mb-6 flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
                   <Users className="h-6 w-6 text-primary" />
@@ -235,12 +335,16 @@ export default function Index() {
                     initial={{ opacity: 0, x: -20 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.3, delay: i * 0.1 }}
-                    className="flex items-start gap-4"
+                    transition={{ duration: 0.4, delay: i * 0.1 }}
+                    whileHover={{ x: 5, transition: { duration: 0.2 } }}
+                    className="flex items-start gap-4 p-2 rounded-lg hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+                    <motion.div 
+                      whileHover={{ scale: 1.1 }}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground"
+                    >
                       {item.step}
-                    </div>
+                    </motion.div>
                     <div>
                       <p className="font-semibold text-foreground">{item.title}</p>
                       <p className="text-sm text-muted-foreground">{item.desc}</p>
@@ -248,10 +352,16 @@ export default function Index() {
                   </motion.div>
                 ))}
               </div>
-            </div>
+            </motion.div>
 
             {/* Traveler Flow */}
-            <div className="rounded-2xl bg-card p-6 shadow-card md:p-8">
+            <motion.div 
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="rounded-2xl bg-card p-6 shadow-card md:p-8"
+            >
               <div className="mb-6 flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/20">
                   <MapPin className="h-6 w-6 text-accent" />
@@ -265,12 +375,16 @@ export default function Index() {
                     initial={{ opacity: 0, x: 20 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.3, delay: i * 0.1 }}
-                    className="flex items-start gap-4"
+                    transition={{ duration: 0.4, delay: i * 0.1 }}
+                    whileHover={{ x: -5, transition: { duration: 0.2 } }}
+                    className="flex items-start gap-4 p-2 rounded-lg hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground">
+                    <motion.div 
+                      whileHover={{ scale: 1.1 }}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground"
+                    >
                       {item.step}
-                    </div>
+                    </motion.div>
                     <div>
                       <p className="font-semibold text-foreground">{item.title}</p>
                       <p className="text-sm text-muted-foreground">{item.desc}</p>
@@ -278,7 +392,7 @@ export default function Index() {
                   </motion.div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -286,7 +400,12 @@ export default function Index() {
       {/* Available Trips Section */}
       <section className="py-16 md:py-24">
         <div className="container">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="flex flex-col md:flex-row md:items-end md:justify-between mb-8"
+          >
             <div>
               <h2 className="text-3xl font-bold text-foreground md:text-4xl">
                 Perjalanan <span className="text-primary">Tersedia</span>
@@ -298,21 +417,23 @@ export default function Index() {
             <Button variant="outline" asChild className="mt-4 md:mt-0">
               <Link to="/perjalanan">Lihat Semua</Link>
             </Button>
-          </div>
+          </motion.div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {availableTrips.map((trip, i) => (
               <motion.div
                 key={trip.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.1 }}
-                className="group rounded-2xl bg-card p-5 shadow-card transition-all hover:shadow-card-hover"
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                whileHover={{ y: -8, transition: { duration: 0.25 } }}
+                className="group rounded-2xl bg-card p-5 shadow-card transition-shadow duration-300 hover:shadow-card-hover"
               >
                 {/* Traveler Info */}
                 <div className="mb-4 flex items-center gap-3">
-                  <img
+                  <motion.img
+                    whileHover={{ scale: 1.1 }}
                     src={trip.avatar}
                     alt={trip.traveler}
                     className="h-12 w-12 rounded-full bg-muted"
@@ -334,9 +455,13 @@ export default function Index() {
                     <p className="text-xs text-muted-foreground">Dari</p>
                     <p className="font-semibold text-foreground">{trip.from}</p>
                   </div>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                  <motion.div 
+                    animate={{ x: [0, 5, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10"
+                  >
                     <ArrowRight className="h-4 w-4 text-primary" />
-                  </div>
+                  </motion.div>
                   <div className="flex-1 text-center">
                     <p className="text-xs text-muted-foreground">Ke</p>
                     <p className="font-semibold text-foreground">{trip.to}</p>
@@ -356,7 +481,7 @@ export default function Index() {
                 </div>
 
                 {/* Action */}
-                <Button variant="soft" className="mt-4 w-full" asChild>
+                <Button variant="soft" className="mt-4 w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors" asChild>
                   <Link to={`/perjalanan/${trip.id}`}>Lihat Detail</Link>
                 </Button>
               </motion.div>
@@ -368,32 +493,63 @@ export default function Index() {
       {/* CTA Section */}
       <section className="py-16 md:py-24">
         <div className="container">
-          <div className="overflow-hidden rounded-3xl bg-gradient-primary p-8 text-center md:p-12 lg:p-16">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="mx-auto max-w-2xl"
-            >
-              <h2 className="text-3xl font-bold text-primary-foreground md:text-4xl">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="overflow-hidden rounded-3xl bg-gradient-primary p-8 text-center md:p-12 lg:p-16 relative"
+          >
+            {/* Background decoration */}
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+              <div className="absolute -bottom-20 -left-20 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+            </div>
+
+            <div className="mx-auto max-w-2xl relative">
+              <motion.h2 
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.2 }}
+                className="text-3xl font-bold text-primary-foreground md:text-4xl"
+              >
                 Siap Mulai Kirim atau Jadi Traveler?
-              </h2>
-              <p className="mt-4 text-primary-foreground/80">
+              </motion.h2>
+              <motion.p 
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.3 }}
+                className="mt-4 text-primary-foreground/80"
+              >
                 Daftar sekarang dan nikmati kemudahan jasa titip dengan NitipGo. 
                 Gratis untuk customer, dapat penghasilan untuk traveler!
-              </p>
-              <div className="mt-8 flex flex-wrap justify-center gap-4">
-                <Button variant="white" size="lg" asChild>
-                  <Link to="/register">
-                    Daftar Gratis <ArrowRight className="ml-1 h-5 w-5" />
+              </motion.p>
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.4 }}
+                className="mt-8 flex flex-wrap justify-center gap-4"
+              >
+                <Button 
+                  variant="white" 
+                  size="lg" 
+                  asChild
+                  className="shadow-lg hover:shadow-xl"
+                >
+                  <Link to="/register" className="group">
+                    Daftar Gratis 
+                    <ArrowRight className="ml-1 h-5 w-5 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </Button>
                 <Button variant="outline" size="lg" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" asChild>
                   <Link to="/daftar-traveler">Jadi Traveler</Link>
                 </Button>
-              </div>
-            </motion.div>
-          </div>
+              </motion.div>
+            </div>
+          </motion.div>
         </div>
       </section>
     </MainLayout>

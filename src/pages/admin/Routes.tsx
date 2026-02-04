@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, MapPin, Plus, Trash2, Edit2, Check, X } from "lucide-react";
-import { MainLayout } from "@/components/layout/MainLayout";
+import { MapPin, Plus, Edit2, Check, X } from "lucide-react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { CountUp } from "@/components/ui/CountUp";
 import {
   Dialog,
   DialogContent,
@@ -28,8 +29,20 @@ const initialCities = [
   { id: 10, name: "Palembang", province: "Sumatera Selatan", active: false, travelers: 18, orders: 32 },
 ];
 
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.03 },
+  },
+};
+
+const staggerItem = {
+  hidden: { opacity: 0, x: -20 },
+  show: { opacity: 1, x: 0 },
+};
+
 export default function AdminRoutes() {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [cities, setCities] = useState(initialCities);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -78,18 +91,13 @@ export default function AdminRoutes() {
   };
 
   return (
-    <MainLayout showFooter={false}>
-      <div className="container py-6 md:py-10">
-        <Button
-          variant="ghost"
-          className="mb-6"
-          onClick={() => navigate(-1)}
+    <DashboardLayout role="admin">
+      <div className="p-6 md:p-8 lg:p-10">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col md:flex-row md:items-center md:justify-between mb-6"
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Kembali
-        </Button>
-
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Kota & Rute</h1>
             <p className="text-muted-foreground">Kelola kota yang tersedia di platform</p>
@@ -98,28 +106,40 @@ export default function AdminRoutes() {
             <Plus className="h-4 w-4 mr-2" />
             Tambah Kota
           </Button>
-        </div>
+        </motion.div>
 
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-3 mb-6">
-          <div className="rounded-xl bg-card p-4 shadow-card">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid gap-4 md:grid-cols-3 mb-6"
+        >
+          <div className="rounded-xl bg-card p-4 shadow-card hover:shadow-card-hover transition-shadow">
             <p className="text-sm text-muted-foreground">Total Kota</p>
-            <p className="text-2xl font-bold text-foreground">{cities.length}</p>
+            <p className="text-2xl font-bold text-foreground">
+              <CountUp end={cities.length} duration={1000} />
+            </p>
           </div>
-          <div className="rounded-xl bg-card p-4 shadow-card">
+          <div className="rounded-xl bg-card p-4 shadow-card hover:shadow-card-hover transition-shadow">
             <p className="text-sm text-muted-foreground">Kota Aktif</p>
-            <p className="text-2xl font-bold text-success">{cities.filter(c => c.active).length}</p>
+            <p className="text-2xl font-bold text-success">
+              <CountUp end={cities.filter(c => c.active).length} duration={1000} />
+            </p>
           </div>
-          <div className="rounded-xl bg-card p-4 shadow-card">
+          <div className="rounded-xl bg-card p-4 shadow-card hover:shadow-card-hover transition-shadow">
             <p className="text-sm text-muted-foreground">Total Traveler</p>
-            <p className="text-2xl font-bold text-primary">{cities.reduce((sum, c) => sum + c.travelers, 0)}</p>
+            <p className="text-2xl font-bold text-primary">
+              <CountUp end={cities.reduce((sum, c) => sum + c.travelers, 0)} duration={1500} />
+            </p>
           </div>
-        </div>
+        </motion.div>
 
         {/* City List */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
           className="rounded-2xl bg-card shadow-card overflow-hidden"
         >
           <div className="overflow-x-auto">
@@ -134,9 +154,13 @@ export default function AdminRoutes() {
                   <th className="text-right p-4 font-medium text-muted-foreground">Aksi</th>
                 </tr>
               </thead>
-              <tbody>
+              <motion.tbody variants={staggerContainer} initial="hidden" animate="show">
                 {cities.map((city) => (
-                  <tr key={city.id} className="border-t border-border hover:bg-muted/30">
+                  <motion.tr 
+                    key={city.id} 
+                    variants={staggerItem}
+                    className="border-t border-border hover:bg-muted/30 transition-colors"
+                  >
                     <td className="p-4">
                       {editingId === city.id ? (
                         <Input
@@ -165,11 +189,7 @@ export default function AdminRoutes() {
                     <td className="p-4 text-foreground">{city.travelers}</td>
                     <td className="p-4 text-foreground">{city.orders}</td>
                     <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        city.active ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"
-                      }`}>
-                        {city.active ? "Aktif" : "Nonaktif"}
-                      </span>
+                      <StatusBadge status={city.active ? "active" : "inactive"} size="sm" />
                     </td>
                     <td className="p-4">
                       <div className="flex justify-end gap-2">
@@ -198,9 +218,9 @@ export default function AdminRoutes() {
                         )}
                       </div>
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))}
-              </tbody>
+              </motion.tbody>
             </table>
           </div>
         </motion.div>
@@ -237,6 +257,6 @@ export default function AdminRoutes() {
           </DialogContent>
         </Dialog>
       </div>
-    </MainLayout>
+    </DashboardLayout>
   );
 }
