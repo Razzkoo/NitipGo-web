@@ -6,17 +6,16 @@ import {
   Clock, 
   CheckCircle, 
   MapPin,
-  Star,
   ArrowRight,
-  ShoppingBag,
-  History
+  ShoppingBag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { CountUp } from "@/components/ui/CountUp";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { CardHover } from "@/components/ui/card-hover";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 // Mock data
 const recentOrders = [
@@ -62,6 +61,9 @@ const staggerItem = {
 };
 
 export default function CustomerDashboard() {
+  const { toast } = useToast();
+  const [showOrderModal, setShowOrderModal] = useState(false);
+
   return (
     <DashboardLayout role="customer">
       <div className="p-6 md:p-8 lg:p-10">
@@ -80,7 +82,7 @@ export default function CustomerDashboard() {
             </p>
           </div>
           <div className="flex items-center gap-3 mt-4 md:mt-0">
-            <Button variant="hero" asChild className="shadow-lg shadow-accent/20">
+            <Button variant="hero" asChild className="shadow-lg shadow-accent/30">
               <Link to="/order/new">
                 <Plus className="h-5 w-5 mr-1" />
                 Buat Order
@@ -139,7 +141,7 @@ export default function CustomerDashboard() {
               <p className="text-primary-foreground/80 mb-4">
                 Minta traveler membelikan barang dari kota lain
               </p>
-              <Button variant="white" className="group">
+              <Button variant="white" className="group shadow-lg">
                 Mulai <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
@@ -156,7 +158,7 @@ export default function CustomerDashboard() {
               <p className="text-accent-foreground/80 mb-4">
                 Titipkan barang Anda ke traveler yang bepergian
               </p>
-              <Button variant="white" className="group">
+              <Button variant="white" className="group shadow-lg">
                 Mulai <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
@@ -173,7 +175,7 @@ export default function CustomerDashboard() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-foreground">Order Terbaru</h2>
             <Button variant="ghost" asChild>
-              <Link to="/orders">Lihat Semua</Link>
+              <Link to="/history">Lihat Semua</Link>
             </Button>
           </div>
 

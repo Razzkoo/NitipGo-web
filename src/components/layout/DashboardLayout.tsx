@@ -4,13 +4,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Package, 
   LayoutDashboard, 
-  ShoppingBag, 
   Clock, 
   User, 
   LogOut,
   Menu,
   X,
-  MapPin,
   Wallet,
   Users,
   Settings,
@@ -44,17 +42,16 @@ interface NavItem {
 
 const customerNavItems: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Order Saya", href: "/orders", icon: ShoppingBag },
   { name: "Riwayat", href: "/history", icon: Clock },
   { name: "Profil", href: "/profile", icon: User },
+  { name: "Pengaturan", href: "/settings", icon: Settings },
 ];
 
 const travelerNavItems: NavItem[] = [
   { name: "Dashboard", href: "/traveler", icon: LayoutDashboard },
-  { name: "Perjalanan", href: "/traveler/trips", icon: MapPin },
-  { name: "Order Masuk", href: "/traveler/orders", icon: Package },
   { name: "Saldo", href: "/traveler/wallet", icon: Wallet },
   { name: "Profil", href: "/traveler/profile", icon: User },
+  { name: "Pengaturan", href: "/traveler/settings", icon: Settings },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -64,6 +61,7 @@ const adminNavItems: NavItem[] = [
   { name: "Kota & Rute", href: "/admin/routes", icon: Route },
   { name: "Dispute", href: "/admin/disputes", icon: AlertTriangle },
   { name: "Pengaturan", href: "/admin/settings", icon: Settings },
+  { name: "Profil", href: "/admin/profile", icon: User },
 ];
 
 const roleConfig = {
@@ -212,9 +210,15 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
             {/* Right Side */}
             <div className="flex items-center gap-3">
               {/* Notifications */}
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
+              <Button variant="ghost" size="icon" className="relative" asChild>
+                <Link to={
+                  role === "customer" ? "/notifications" :
+                  role === "traveler" ? "/traveler/notifications" :
+                  "/admin/notifications"
+                }>
+                  <Bell className="h-5 w-5" />
+                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                </Link>
               </Button>
 
               {/* User Menu */}
@@ -242,13 +246,21 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to="/profile" className="cursor-pointer">
+                    <Link to={
+                      role === "customer" ? "/profile" :
+                      role === "traveler" ? "/traveler/profile" :
+                      "/admin/profile"
+                    } className="cursor-pointer">
                       <User className="h-4 w-4 mr-2" />
                       Profil
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/settings" className="cursor-pointer">
+                    <Link to={
+                      role === "customer" ? "/settings" :
+                      role === "traveler" ? "/traveler/settings" :
+                      "/admin/settings"
+                    } className="cursor-pointer">
                       <Settings className="h-4 w-4 mr-2" />
                       Pengaturan
                     </Link>
