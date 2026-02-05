@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Package, MapPin, Clock, CheckCircle, Truck, ArrowRight } from "lucide-react";
-import { MainLayout } from "@/components/layout/MainLayout";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 
 // Mock tracking data
@@ -41,9 +41,8 @@ export default function OrderTracking() {
   };
 
   return (
-    <MainLayout>
-      <section className="py-8 md:py-12">
-        <div className="container">
+    <DashboardLayout role="customer">
+      <div className="p-6 md:p-8 lg:p-10">
           <Button
             variant="ghost"
             className="mb-6"
@@ -165,8 +164,7 @@ export default function OrderTracking() {
               </Button>
             </div>
           </div>
-        </div>
-      </section>
-    </MainLayout>
+      </div>
+    </DashboardLayout>
   );
 }

@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Package, MapPin, Calendar, Upload, Info, ArrowRight, CheckCircle } from "lucide-react";
-import { MainLayout } from "@/components/layout/MainLayout";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,8 +17,6 @@ const pickupPoints = [
 
 export default function NewOrder() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const tripId = searchParams.get("trip");
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({
@@ -45,9 +43,8 @@ export default function NewOrder() {
   };
 
   return (
-    <MainLayout>
-      <section className="py-8 md:py-12">
-        <div className="container">
+    <DashboardLayout role="customer">
+      <div className="p-6 md:p-8 lg:p-10">
           <Button
             variant="ghost"
             className="mb-6"
@@ -57,7 +54,7 @@ export default function NewOrder() {
             {step > 1 ? "Langkah Sebelumnya" : "Kembali"}
           </Button>
 
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-2xl">
             {/* Progress */}
             {!submitted && (
               <div className="flex items-center justify-center gap-2 mb-8">
@@ -297,8 +294,7 @@ export default function NewOrder() {
               </motion.div>
             )}
           </div>
-        </div>
-      </section>
-    </MainLayout>
+      </div>
+    </DashboardLayout>
   );
 }

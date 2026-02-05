@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, Phone, MapPin, Send, MessageSquare, CheckCircle } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -94,7 +95,9 @@ export default function Contact() {
                 <p className="text-primary-foreground/80 mb-4">
                   Butuh bantuan cepat? Chat langsung dengan tim support kami.
                 </p>
-                <Button variant="white">Mulai Chat</Button>
+                <Button variant="white" asChild className="shadow-lg">
+                  <Link to="/live-chat">Mulai Chat</Link>
+                </Button>
               </div>
             </motion.div>
 

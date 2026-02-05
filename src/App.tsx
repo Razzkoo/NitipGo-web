@@ -43,6 +43,26 @@ import AdminRoutes from "./pages/admin/Routes";
 import AdminDisputes from "./pages/admin/Disputes";
 import AdminSettings from "./pages/admin/Settings";
 
+// Profile Pages
+import CustomerProfile from "./pages/profile/CustomerProfile";
+import TravelerProfile from "./pages/profile/TravelerProfile";
+import AdminProfile from "./pages/profile/AdminProfile";
+
+// Notification Pages
+import CustomerNotifications from "./pages/notifications/CustomerNotifications";
+import TravelerNotifications from "./pages/notifications/TravelerNotifications";
+import AdminNotifications from "./pages/notifications/AdminNotifications";
+
+// Settings Pages
+import CustomerSettings from "./pages/settings/CustomerSettings";
+import TravelerSettings from "./pages/settings/TravelerSettings";
+
+// History Page
+import CustomerHistory from "./pages/dashboard/CustomerHistory";
+
+// Live Chat
+import LiveChat from "./pages/LiveChat";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -79,15 +99,18 @@ const App = () => (
           
           {/* Customer Dashboard */}
           <Route path="/dashboard" element={<CustomerDashboard />} />
-          <Route path="/orders" element={<CustomerDashboard />} />
+          <Route path="/history" element={<CustomerHistory />} />
+          <Route path="/profile" element={<CustomerProfile />} />
+          <Route path="/notifications" element={<CustomerNotifications />} />
+          <Route path="/settings" element={<CustomerSettings />} />
           
           {/* Traveler Dashboard */}
           <Route path="/traveler" element={<TravelerDashboard />} />
           <Route path="/traveler/trip/new" element={<NewTrip />} />
-          <Route path="/traveler/trip/:id" element={<TravelerDashboard />} />
-          <Route path="/traveler/trips" element={<TravelerDashboard />} />
-          <Route path="/traveler/orders" element={<TravelerDashboard />} />
           <Route path="/traveler/wallet" element={<TravelerWallet />} />
+          <Route path="/traveler/profile" element={<TravelerProfile />} />
+          <Route path="/traveler/notifications" element={<TravelerNotifications />} />
+          <Route path="/traveler/settings" element={<TravelerSettings />} />
           
           {/* Admin Dashboard */}
           <Route path="/admin" element={<AdminDashboard />} />
@@ -97,6 +120,11 @@ const App = () => (
           <Route path="/admin/routes" element={<AdminRoutes />} />
           <Route path="/admin/disputes" element={<AdminDisputes />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/profile" element={<AdminProfile />} />
+          <Route path="/admin/notifications" element={<AdminNotifications />} />
+          
+          {/* Live Chat */}
+          <Route path="/live-chat" element={<LiveChat />} />
           
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
