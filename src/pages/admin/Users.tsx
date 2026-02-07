@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Users, Shield, Ban, CheckCircle, Eye } from "lucide-react";
+import { Search, Users, Shield, Ban, CheckCircle, Eye, Pencil, X, Save } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -17,11 +18,11 @@ import {
 } from "@/components/ui/dialog";
 
 const mockUsers = [
-  { id: 1, name: "Budi Santoso", email: "budi@email.com", type: "customer", status: "active" as const, joinDate: "10 Jan 2024", orders: 12 },
-  { id: 2, name: "Andi Pratama", email: "andi@email.com", type: "traveler", status: "active" as const, joinDate: "5 Jan 2024", trips: 45, verified: true },
-  { id: 3, name: "Sari Dewi", email: "sari@email.com", type: "traveler", status: "pending" as const, joinDate: "14 Feb 2024", trips: 0, verified: false },
-  { id: 4, name: "Rina Kusuma", email: "rina@email.com", type: "customer", status: "cancelled" as const, joinDate: "20 Dec 2023", orders: 3 },
-  { id: 5, name: "Dimas Wijaya", email: "dimas@email.com", type: "traveler", status: "active" as const, joinDate: "1 Feb 2024", trips: 23, verified: true },
+  { id: 1, name: "Budi Santoso", email: "budi@email.com", phone: "0812-3456-7890", type: "customer", status: "active" as const, joinDate: "10 Jan 2024", orders: 12 },
+  { id: 2, name: "Andi Pratama", email: "andi@email.com", phone: "0813-4567-8901", type: "traveler", status: "active" as const, joinDate: "5 Jan 2024", trips: 45, verified: true },
+  { id: 3, name: "Sari Dewi", email: "sari@email.com", phone: "0814-5678-9012", type: "traveler", status: "pending" as const, joinDate: "14 Feb 2024", trips: 0, verified: false },
+  { id: 4, name: "Rina Kusuma", email: "rina@email.com", phone: "0815-6789-0123", type: "customer", status: "cancelled" as const, joinDate: "20 Dec 2023", orders: 3 },
+  { id: 5, name: "Dimas Wijaya", email: "dimas@email.com", phone: "0816-7890-1234", type: "traveler", status: "active" as const, joinDate: "1 Feb 2024", trips: 23, verified: true },
 ];
 
 const staggerContainer = {
@@ -44,6 +45,8 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({ name: "", phone: "" });
   const [actionDialog, setActionDialog] = useState<{ open: boolean; action: string; user: any }>({
     open: false,
     action: "",
@@ -70,6 +73,19 @@ export default function AdminUsers() {
       description: `${user.name} telah ${action === "verify" ? "diverifikasi" : action === "suspend" ? "di-suspend" : "diaktifkan"}.`,
     });
     setActionDialog({ open: false, action: "", user: null });
+  };
+
+  const handleEditClick = (user: any) => {
+    setEditingUser(user);
+    setEditFormData({ name: user.name, phone: user.phone || "" });
+  };
+
+  const handleSaveEdit = () => {
+    toast({
+      title: "Data Diperbarui",
+      description: `Data ${editingUser.name} berhasil diperbarui.`,
+    });
+    setEditingUser(null);
   };
 
   return (
@@ -174,6 +190,9 @@ export default function AdminUsers() {
                           <Button variant="ghost" size="sm" onClick={() => setSelectedUser(user)}>
                             <Eye className="h-4 w-4" />
                           </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleEditClick(user)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                           {user.type === "traveler" && !user.verified && (
                             <Button size="sm" onClick={() => handleAction("verify", user)}>
                               <CheckCircle className="h-4 w-4 mr-1" />
@@ -246,6 +265,59 @@ export default function AdminUsers() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit User Dialog */}
+        <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Data User</DialogTitle>
+              <DialogDescription>
+                Ubah data pengguna. Email tidak dapat diubah.
+              </DialogDescription>
+            </DialogHeader>
+            {editingUser && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-name">Nama Lengkap</Label>
+                  <Input
+                    id="edit-name"
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-email">Email</Label>
+                  <Input
+                    id="edit-email"
+                    value={editingUser.email}
+                    disabled
+                    className="mt-1.5 bg-muted"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Email tidak dapat diubah</p>
+                </div>
+                <div>
+                  <Label htmlFor="edit-phone">Nomor Telepon</Label>
+                  <Input
+                    id="edit-phone"
+                    value={editFormData.phone}
+                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                    className="mt-1.5"
+                  />
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingUser(null)}>
+                Batal
+              </Button>
+              <Button onClick={handleSaveEdit}>
+                <Save className="h-4 w-4 mr-2" />
+                Simpan
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 

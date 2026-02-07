@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Calendar, Package, ArrowRight, CheckCircle } from "lucide-react";
+import { MapPin, Calendar, Package, ArrowRight, CheckCircle, Plus, Trash2 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,12 @@ const cities = [
   "Jakarta", "Bandung", "Surabaya", "Yogyakarta", "Semarang",
   "Malang", "Medan", "Makassar", "Bali", "Palembang"
 ];
+
+interface PickupPoint {
+  id: number;
+  location: string;
+  time: string;
+}
 
 export default function NewTrip() {
   const navigate = useNavigate();
@@ -28,10 +34,34 @@ export default function NewTrip() {
     pricePerKg: "",
     notes: "",
   });
+  const [pickupPoints, setPickupPoints] = useState<PickupPoint[]>([
+    { id: 1, location: "", time: "" }
+  ]);
+
+  const handleAddPickupPoint = () => {
+    if (pickupPoints.length < 3) {
+      setPickupPoints([
+        ...pickupPoints,
+        { id: Date.now(), location: "", time: "" }
+      ]);
+    }
+  };
+
+  const handleRemovePickupPoint = (id: number) => {
+    if (pickupPoints.length > 1) {
+      setPickupPoints(pickupPoints.filter(p => p.id !== id));
+    }
+  };
+
+  const handlePickupChange = (id: number, field: 'location' | 'time', value: string) => {
+    setPickupPoints(pickupPoints.map(p => 
+      p.id === id ? { ...p, [field]: value } : p
+    ));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("New trip:", formData);
+    console.log("New trip:", formData, "Pickup points:", pickupPoints);
     toast({
       title: "Perjalanan Ditambahkan!",
       description: "Perjalanan Anda sudah aktif dan bisa menerima order.",
@@ -150,6 +180,65 @@ export default function NewTrip() {
                       required
                     />
                   </div>
+                </div>
+
+                {/* Pickup Points */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Pos Pengambilan Barang</Label>
+                    {pickupPoints.length < 3 && (
+                      <Button type="button" variant="ghost" size="sm" onClick={handleAddPickupPoint}>
+                        <Plus className="h-4 w-4 mr-1" />
+                        Tambah Pos
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Tambahkan 1-3 titik pengambilan barang dalam perjalanan ini
+                  </p>
+                  {pickupPoints.map((point, index) => (
+                    <motion.div
+                      key={point.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-4 rounded-xl bg-muted/50 space-y-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Pos {index + 1}</span>
+                        {pickupPoints.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            onClick={() => handleRemovePickupPoint(point.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">Lokasi</Label>
+                          <Input
+                            placeholder="Contoh: Mall Grand Indonesia"
+                            value={point.location}
+                            onChange={(e) => handlePickupChange(point.id, 'location', e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Jam</Label>
+                          <Input
+                            type="time"
+                            value={point.time}
+                            onChange={(e) => handlePickupChange(point.id, 'time', e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
 
                 {/* Capacity & Price */}

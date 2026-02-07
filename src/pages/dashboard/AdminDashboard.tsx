@@ -12,6 +12,7 @@ import {
   CheckCircle,
   ArrowUpRight,
   ArrowDownRight,
+  ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -57,10 +58,10 @@ const recentActivity = [
   { type: "user", message: "Maya Putri terverifikasi sebagai traveler", time: "1 jam lalu" },
 ];
 
-const pendingVerifications = [
-  { id: 1, name: "Ahmad Fauzi", type: "Traveler", date: "Hari ini" },
-  { id: 2, name: "Dewi Lestari", type: "Traveler", date: "Hari ini" },
-  { id: 3, name: "Riko Pratama", type: "Traveler", date: "Kemarin" },
+const pendingOrders = [
+  { id: "ORD-1235", customer: "Ahmad Fauzi", item: "iPhone 15 Pro", status: "Menunggu Review", date: "Hari ini" },
+  { id: "ORD-1236", customer: "Dewi Lestari", item: "Laptop ASUS", status: "Menunggu Review", date: "Hari ini" },
+  { id: "ORD-1237", customer: "Riko Pratama", item: "Sepatu Nike", status: "Menunggu Review", date: "Kemarin" },
 ];
 
 const quickLinks = [
@@ -83,8 +84,8 @@ const quickLinks = [
   { 
     href: "/admin/routes", 
     icon: MapPin, 
-    title: "Kota & Rute", 
-    desc: "Kelola lokasi",
+    title: "Rute Perjalanan", 
+    desc: "Kelola rute",
     color: "bg-accent/10",
     iconColor: "text-accent"
   },
@@ -244,7 +245,7 @@ export default function AdminDashboard() {
             )}
           </motion.div>
 
-          {/* Pending Verifications */}
+          {/* Pending Orders */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -252,22 +253,22 @@ export default function AdminDashboard() {
             className="rounded-2xl bg-card p-6 shadow-card"
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-foreground">Verifikasi Pending</h2>
+              <h2 className="text-xl font-semibold text-foreground">Order Pending</h2>
               <motion.span 
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.7, type: "spring" }}
                 className="flex h-6 w-6 items-center justify-center rounded-full bg-warning/20 text-xs font-bold text-warning"
               >
-                {pendingVerifications.length}
+                {pendingOrders.length}
               </motion.span>
             </div>
             
-            {pendingVerifications.length > 0 ? (
+            {pendingOrders.length > 0 ? (
               <div className="space-y-3">
-                {pendingVerifications.map((item, i) => (
+                {pendingOrders.map((order, i) => (
                   <motion.div 
-                    key={item.id} 
+                    key={order.id} 
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.6 + i * 0.1 }}
@@ -275,24 +276,26 @@ export default function AdminDashboard() {
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                   >
                     <div>
-                      <p className="font-medium text-foreground">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">{item.type} • {item.date}</p>
+                      <p className="font-medium text-foreground">{order.id}</p>
+                      <p className="text-xs text-muted-foreground">{order.item} • {order.date}</p>
                     </div>
-                    <Button size="sm">Review</Button>
+                    <Button size="sm" asChild>
+                      <Link to="/admin/transactions">Review</Link>
+                    </Button>
                   </motion.div>
                 ))}
               </div>
             ) : (
               <EmptyState
-                icon={Users}
-                title="Tidak ada verifikasi"
-                description="Semua user sudah terverifikasi"
+                icon={ClipboardList}
+                title="Tidak ada order pending"
+                description="Semua order sudah diproses"
                 variant="compact"
               />
             )}
             
             <Button variant="ghost" className="w-full mt-4" asChild>
-              <Link to="/admin/verifications">Lihat Semua</Link>
+              <Link to="/admin/transactions">Lihat Semua</Link>
             </Button>
           </motion.div>
         </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Settings, Percent, Save, RotateCcw } from "lucide-react";
+import { Percent, Save, RotateCcw, Shield } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,11 +13,6 @@ export default function AdminSettings() {
   const [settings, setSettings] = useState({
     commissionRate: 10,
     minWithdrawal: 50000,
-    maxOrderWeight: 20,
-    expressEnabled: true,
-    expressMultiplier: 1.5,
-    boostEnabled: true,
-    boostPrice: 25000,
     autoVerifyTraveler: false,
     maintenanceMode: false,
   });
@@ -41,11 +36,6 @@ export default function AdminSettings() {
     setSettings({
       commissionRate: 10,
       minWithdrawal: 50000,
-      maxOrderWeight: 20,
-      expressEnabled: true,
-      expressMultiplier: 1.5,
-      boostEnabled: true,
-      boostPrice: 25000,
       autoVerifyTraveler: false,
       maintenanceMode: false,
     });
@@ -122,22 +112,10 @@ export default function AdminSettings() {
                   <p className="text-xs text-muted-foreground">Minimum saldo untuk ditarik</p>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="maxWeight">Berat Maksimal Order (kg)</Label>
-                <Input
-                  id="maxWeight"
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={settings.maxOrderWeight}
-                  onChange={(e) => handleChange("maxOrderWeight", parseInt(e.target.value))}
-                />
-              </div>
             </div>
           </motion.div>
 
-          {/* Express Service */}
+          {/* System Settings */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -145,95 +123,15 @@ export default function AdminSettings() {
             whileHover={{ y: -2, transition: { duration: 0.2 } }}
             className="rounded-2xl bg-card p-6 shadow-card hover:shadow-card-hover transition-all"
           >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <motion.div 
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10"
-                >
-                  <Settings className="h-5 w-5 text-accent" />
-                </motion.div>
-                <h2 className="text-lg font-semibold text-foreground">Layanan Express</h2>
-              </div>
-              <Switch
-                checked={settings.expressEnabled}
-                onCheckedChange={(checked) => handleChange("expressEnabled", checked)}
-              />
-            </div>
-
-            {settings.expressEnabled && (
+            <div className="flex items-center gap-3 mb-6">
               <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className="space-y-2"
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10"
               >
-                <Label htmlFor="expressMultiplier">Multiplier Harga</Label>
-                <Input
-                  id="expressMultiplier"
-                  type="number"
-                  min="1"
-                  max="5"
-                  step="0.1"
-                  value={settings.expressMultiplier}
-                  onChange={(e) => handleChange("expressMultiplier", parseFloat(e.target.value))}
-                />
-                <p className="text-xs text-muted-foreground">Harga = Harga Normal × {settings.expressMultiplier}</p>
+                <Shield className="h-5 w-5 text-accent" />
               </motion.div>
-            )}
-          </motion.div>
-
-          {/* Boost Feature */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            whileHover={{ y: -2, transition: { duration: 0.2 } }}
-            className="rounded-2xl bg-card p-6 shadow-card hover:shadow-card-hover transition-all"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <motion.div 
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/10"
-                >
-                  <Settings className="h-5 w-5 text-warning" />
-                </motion.div>
-                <h2 className="text-lg font-semibold text-foreground">Boost Traveler</h2>
-              </div>
-              <Switch
-                checked={settings.boostEnabled}
-                onCheckedChange={(checked) => handleChange("boostEnabled", checked)}
-              />
+              <h2 className="text-lg font-semibold text-foreground">Sistem</h2>
             </div>
-
-            {settings.boostEnabled && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className="space-y-2"
-              >
-                <Label htmlFor="boostPrice">Harga Boost (Rp/hari)</Label>
-                <Input
-                  id="boostPrice"
-                  type="number"
-                  min="5000"
-                  step="5000"
-                  value={settings.boostPrice}
-                  onChange={(e) => handleChange("boostPrice", parseInt(e.target.value))}
-                />
-              </motion.div>
-            )}
-          </motion.div>
-
-          {/* System Settings */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            whileHover={{ y: -2, transition: { duration: 0.2 } }}
-            className="rounded-2xl bg-card p-6 shadow-card hover:shadow-card-hover transition-all"
-          >
-            <h2 className="text-lg font-semibold text-foreground mb-6">Sistem</h2>
             <div className="space-y-4">
               <motion.div 
                 whileHover={{ x: 4, transition: { duration: 0.2 } }}

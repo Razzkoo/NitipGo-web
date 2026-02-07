@@ -1,10 +1,17 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Search, MapPin, Calendar, Star, ArrowRight, Filter, SlidersHorizontal } from "lucide-react";
+import { Search, MapPin, Calendar, Star, ArrowRight, SlidersHorizontal, X } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Mock data for trips
 const mockTrips = [
@@ -14,7 +21,8 @@ const mockTrips = [
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=andi",
     from: "Jakarta",
     to: "Bandung",
-    date: "15 Feb 2024",
+    date: "2024-02-15",
+    displayDate: "15 Feb 2024",
     capacity: "5 kg tersisa",
     rating: 4.9,
     trips: 127,
@@ -26,7 +34,8 @@ const mockTrips = [
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sari",
     from: "Surabaya",
     to: "Malang",
-    date: "16 Feb 2024",
+    date: "2024-02-16",
+    displayDate: "16 Feb 2024",
     capacity: "3 kg tersisa",
     rating: 4.8,
     trips: 89,
@@ -38,7 +47,8 @@ const mockTrips = [
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=budi",
     from: "Yogyakarta",
     to: "Semarang",
-    date: "17 Feb 2024",
+    date: "2024-02-17",
+    displayDate: "17 Feb 2024",
     capacity: "8 kg tersisa",
     rating: 5.0,
     trips: 203,
@@ -50,7 +60,8 @@ const mockTrips = [
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=rina",
     from: "Jakarta",
     to: "Surabaya",
-    date: "18 Feb 2024",
+    date: "2024-02-18",
+    displayDate: "18 Feb 2024",
     capacity: "10 kg tersisa",
     rating: 4.7,
     trips: 156,
@@ -62,7 +73,8 @@ const mockTrips = [
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=dimas",
     from: "Medan",
     to: "Padang",
-    date: "19 Feb 2024",
+    date: "2024-02-19",
+    displayDate: "19 Feb 2024",
     capacity: "6 kg tersisa",
     rating: 4.6,
     trips: 78,
@@ -74,7 +86,8 @@ const mockTrips = [
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=maya",
     from: "Bali",
     to: "Jakarta",
-    date: "20 Feb 2024",
+    date: "2024-02-20",
+    displayDate: "20 Feb 2024",
     capacity: "4 kg tersisa",
     rating: 4.9,
     trips: 234,
@@ -82,15 +95,55 @@ const mockTrips = [
   },
 ];
 
+const cities = [
+  "Jakarta", "Bandung", "Surabaya", "Yogyakarta", "Semarang",
+  "Malang", "Medan", "Makassar", "Bali", "Padang"
+];
+
 export default function Trips() {
   const [searchFrom, setSearchFrom] = useState("");
   const [searchTo, setSearchTo] = useState("");
+  const [searchDate, setSearchDate] = useState("");
+  const [showFilterDialog, setShowFilterDialog] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState({
+    from: "",
+    to: "",
+    date: "",
+  });
 
   const filteredTrips = mockTrips.filter((trip) => {
-    const matchFrom = !searchFrom || trip.from.toLowerCase().includes(searchFrom.toLowerCase());
-    const matchTo = !searchTo || trip.to.toLowerCase().includes(searchTo.toLowerCase());
-    return matchFrom && matchTo;
+    const matchFrom = !appliedFilters.from || trip.from.toLowerCase().includes(appliedFilters.from.toLowerCase());
+    const matchTo = !appliedFilters.to || trip.to.toLowerCase().includes(appliedFilters.to.toLowerCase());
+    const matchDate = !appliedFilters.date || trip.date === appliedFilters.date;
+    return matchFrom && matchTo && matchDate;
   });
+
+  const handleSearch = () => {
+    setAppliedFilters({
+      from: searchFrom,
+      to: searchTo,
+      date: searchDate,
+    });
+  };
+
+  const handleApplyFilter = () => {
+    setAppliedFilters({
+      from: searchFrom,
+      to: searchTo,
+      date: searchDate,
+    });
+    setShowFilterDialog(false);
+  };
+
+  const handleResetFilter = () => {
+    setSearchFrom("");
+    setSearchTo("");
+    setSearchDate("");
+    setAppliedFilters({ from: "", to: "", date: "" });
+    setShowFilterDialog(false);
+  };
+
+  const hasActiveFilters = appliedFilters.from || appliedFilters.to || appliedFilters.date;
 
   return (
     <MainLayout>
@@ -115,31 +168,63 @@ export default function Trips() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="mx-auto max-w-3xl rounded-2xl bg-card p-4 shadow-card md:p-6"
+            className="mx-auto max-w-4xl rounded-2xl bg-card p-4 shadow-card md:p-6"
           >
-            <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto]">
+            <div className="grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto]">
               <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Kota asal"
-                  value={searchFrom}
-                  onChange={(e) => setSearchFrom(e.target.value)}
-                  className="pl-10 h-12"
-                />
+                <Label className="text-xs text-muted-foreground mb-1 block">Kota Asal</Label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Dari mana?"
+                    list="cities-from"
+                    value={searchFrom}
+                    onChange={(e) => setSearchFrom(e.target.value)}
+                    className="pl-10 h-12"
+                  />
+                  <datalist id="cities-from">
+                    {cities.map((city) => (
+                      <option key={city} value={city} />
+                    ))}
+                  </datalist>
+                </div>
               </div>
               <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" />
-                <Input
-                  placeholder="Kota tujuan"
-                  value={searchTo}
-                  onChange={(e) => setSearchTo(e.target.value)}
-                  className="pl-10 h-12"
-                />
+                <Label className="text-xs text-muted-foreground mb-1 block">Kota Tujuan</Label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-primary" />
+                  <Input
+                    placeholder="Ke mana?"
+                    list="cities-to"
+                    value={searchTo}
+                    onChange={(e) => setSearchTo(e.target.value)}
+                    className="pl-10 h-12"
+                  />
+                  <datalist id="cities-to">
+                    {cities.map((city) => (
+                      <option key={city} value={city} />
+                    ))}
+                  </datalist>
+                </div>
               </div>
-              <Button variant="hero" size="lg" className="h-12">
-                <Search className="h-5 w-5 mr-2" />
-                Cari
-              </Button>
+              <div className="relative">
+                <Label className="text-xs text-muted-foreground mb-1 block">Tanggal</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="date"
+                    value={searchDate}
+                    onChange={(e) => setSearchDate(e.target.value)}
+                    className="pl-10 h-12"
+                  />
+                </div>
+              </div>
+              <div className="flex items-end">
+                <Button variant="hero" size="lg" className="h-12 w-full md:w-auto" onClick={handleSearch}>
+                  <Search className="h-5 w-5 mr-2" />
+                  Cari
+                </Button>
+              </div>
             </div>
           </motion.div>
         </div>
@@ -148,11 +233,41 @@ export default function Trips() {
       {/* Results */}
       <section className="py-12 md:py-16">
         <div className="container">
-          <div className="flex items-center justify-between mb-6">
-            <p className="text-muted-foreground">
-              <span className="font-semibold text-foreground">{filteredTrips.length}</span> perjalanan ditemukan
-            </p>
-            <Button variant="outline" size="sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3 flex-wrap">
+              <p className="text-muted-foreground">
+                <span className="font-semibold text-foreground">{filteredTrips.length}</span> perjalanan ditemukan
+              </p>
+              {hasActiveFilters && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {appliedFilters.from && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-primary/10 text-primary">
+                      Dari: {appliedFilters.from}
+                      <button onClick={() => setAppliedFilters({ ...appliedFilters, from: "" })}>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                  {appliedFilters.to && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-primary/10 text-primary">
+                      Ke: {appliedFilters.to}
+                      <button onClick={() => setAppliedFilters({ ...appliedFilters, to: "" })}>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                  {appliedFilters.date && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-primary/10 text-primary">
+                      {appliedFilters.date}
+                      <button onClick={() => setAppliedFilters({ ...appliedFilters, date: "" })}>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowFilterDialog(true)}>
               <SlidersHorizontal className="h-4 w-4 mr-2" />
               Filter
             </Button>
@@ -204,7 +319,7 @@ export default function Trips() {
                 <div className="flex items-center justify-between text-sm mb-2">
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <Calendar className="h-4 w-4" />
-                    <span>{trip.date}</span>
+                    <span>{trip.displayDate}</span>
                   </div>
                   <span className="font-medium text-success">{trip.capacity}</span>
                 </div>
@@ -231,13 +346,74 @@ export default function Trips() {
               <p className="text-muted-foreground mb-6">
                 Coba ubah filter pencarian atau cek kembali nanti
               </p>
-              <Button variant="outline" onClick={() => { setSearchFrom(""); setSearchTo(""); }}>
+              <Button variant="outline" onClick={handleResetFilter}>
                 Reset Pencarian
               </Button>
             </div>
           )}
         </div>
       </section>
+
+      {/* Filter Dialog */}
+      <Dialog open={showFilterDialog} onOpenChange={setShowFilterDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Filter Perjalanan</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="filter-from">Kota Asal</Label>
+              <Input
+                id="filter-from"
+                placeholder="Contoh: Jakarta"
+                list="cities-filter-from"
+                value={searchFrom}
+                onChange={(e) => setSearchFrom(e.target.value)}
+                className="mt-1.5"
+              />
+              <datalist id="cities-filter-from">
+                {cities.map((city) => (
+                  <option key={city} value={city} />
+                ))}
+              </datalist>
+            </div>
+            <div>
+              <Label htmlFor="filter-to">Kota Tujuan</Label>
+              <Input
+                id="filter-to"
+                placeholder="Contoh: Bandung"
+                list="cities-filter-to"
+                value={searchTo}
+                onChange={(e) => setSearchTo(e.target.value)}
+                className="mt-1.5"
+              />
+              <datalist id="cities-filter-to">
+                {cities.map((city) => (
+                  <option key={city} value={city} />
+                ))}
+              </datalist>
+            </div>
+            <div>
+              <Label htmlFor="filter-date">Tanggal</Label>
+              <Input
+                id="filter-date"
+                type="date"
+                value={searchDate}
+                onChange={(e) => setSearchDate(e.target.value)}
+                className="mt-1.5"
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 mt-4">
+            <Button variant="outline" onClick={handleResetFilter} className="flex-1">
+              Reset
+            </Button>
+            <Button onClick={handleApplyFilter} className="flex-1">
+              Terapkan Filter
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

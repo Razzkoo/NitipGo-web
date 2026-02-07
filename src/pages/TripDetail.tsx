@@ -1,8 +1,18 @@
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Star, MapPin, Calendar, Package, Shield, Clock, MessageSquare, CheckCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Star, MapPin, Calendar, Package, Shield, Clock, MessageSquare, CheckCircle, Phone, Mail, Send } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Mock trip data
 const mockTrips: Record<string, any> = {
@@ -24,6 +34,8 @@ const mockTrips: Record<string, any> = {
     verified: true,
     responseTime: "< 1 jam",
     completionRate: "99%",
+    phone: "0813-xxxx-1234",
+    email: "andi.p@email.com",
     reviews: [
       { name: "Budi S.", rating: 5, comment: "Barang sampai tepat waktu, kondisi bagus!", date: "10 Feb 2024" },
       { name: "Rina K.", rating: 5, comment: "Komunikasi bagus, sangat recommended!", date: "5 Feb 2024" },
@@ -47,6 +59,8 @@ const mockTrips: Record<string, any> = {
     verified: true,
     responseTime: "< 30 menit",
     completionRate: "98%",
+    phone: "0814-xxxx-5678",
+    email: "sari.d@email.com",
     reviews: [
       { name: "Dimas W.", rating: 5, comment: "Pelayanan sangat memuaskan!", date: "12 Feb 2024" },
     ],
@@ -69,6 +83,8 @@ const mockTrips: Record<string, any> = {
     verified: true,
     responseTime: "< 15 menit",
     completionRate: "100%",
+    phone: "0815-xxxx-9012",
+    email: "budi.s@email.com",
     reviews: [
       { name: "Maya P.", rating: 5, comment: "Best traveler! Sangat profesional.", date: "14 Feb 2024" },
       { name: "Ahmad F.", rating: 5, comment: "Sudah 5x pakai jasa Mas Budi, selalu puas!", date: "8 Feb 2024" },
@@ -95,13 +111,30 @@ const defaultTrip = {
   verified: true,
   responseTime: "< 1 jam",
   completionRate: "95%",
+  phone: "0812-xxxx-xxxx",
+  email: "traveler@email.com",
   reviews: [],
 };
 
 export default function TripDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const trip = mockTrips[id || ""] || defaultTrip;
+  
+  const [showContactDialog, setShowContactDialog] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const handleSendMessage = () => {
+    if (message.trim()) {
+      toast({
+        title: "Pesan Terkirim!",
+        description: `Pesan Anda kepada ${trip.traveler} telah terkirim. Mohon tunggu balasan.`,
+      });
+      setMessage("");
+      setShowContactDialog(false);
+    }
+  };
 
   return (
     <MainLayout>
@@ -281,7 +314,7 @@ export default function TripDetail() {
                       Ajukan Order
                     </Link>
                   </Button>
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full" onClick={() => setShowContactDialog(true)}>
                     <MessageSquare className="h-5 w-5 mr-2" />
                     Hubungi Traveler
                   </Button>
@@ -295,6 +328,69 @@ export default function TripDetail() {
           </div>
         </div>
       </section>
+
+      {/* Contact Traveler Dialog */}
+      <Dialog open={showContactDialog} onOpenChange={setShowContactDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Hubungi Traveler</DialogTitle>
+            <DialogDescription>
+              Kirim pesan ke {trip.traveler} sebelum mengajukan order
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Traveler info */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+              <img
+                src={trip.avatar}
+                alt={trip.traveler}
+                className="h-12 w-12 rounded-full bg-muted"
+              />
+              <div>
+                <p className="font-semibold text-foreground">{trip.traveler}</p>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Star className="h-3 w-3 fill-warning text-warning" />
+                  <span>{trip.rating}</span>
+                  <span>•</span>
+                  <span>{trip.trips} trip</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Info */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <Phone className="h-4 w-4 text-primary" />
+                <span className="text-muted-foreground">{trip.phone}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Mail className="h-4 w-4 text-primary" />
+                <span className="text-muted-foreground">{trip.email}</span>
+              </div>
+            </div>
+
+            {/* Message Input */}
+            <div>
+              <Textarea
+                placeholder="Tulis pesan Anda di sini... Contoh: Halo, saya ingin tanya tentang perjalanan ke Bandung..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                rows={4}
+              />
+            </div>
+
+            <Button className="w-full" onClick={handleSendMessage} disabled={!message.trim()}>
+              <Send className="h-4 w-4 mr-2" />
+              Kirim Pesan
+            </Button>
+
+            <p className="text-xs text-muted-foreground text-center">
+              Pesan akan dikirim melalui sistem NitipGo. Traveler biasanya merespons dalam {trip.responseTime}.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
