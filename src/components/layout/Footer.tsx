@@ -3,11 +3,6 @@ import { Package, MapPin, Phone, Mail, Instagram, Twitter, Facebook, MessageCirc
 import { Button } from "@/components/ui/button";
 
 const footerLinks = {
-  layanan: [
-    { name: "Titip Beli", href: "/order/new" },
-    { name: "Kirim Barang", href: "/order/new" },
-    { name: "Jadi Traveler", href: "/daftar-traveler" },
-  ],
   perusahaan: [
     { name: "Tentang Kami", href: "/cara-kerja" },
     { name: "Cara Kerja", href: "/cara-kerja" },
@@ -24,7 +19,7 @@ export function Footer() {
   return (
     <footer className="border-t border-border/10 bg-footer">
       <div className="container py-12 md:py-16 text-footer">
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {/* Brand */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2">
@@ -58,23 +53,6 @@ export function Footer() {
                 <Facebook className="h-4 w-4" />
               </Link>
             </div>
-          </div>
-
-          {/* Layanan */}
-          <div>
-            <h3 className="mb-4 font-semibold text-white">Layanan</h3>
-            <ul className="space-y-3">
-              {footerLinks.layanan.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    to={link.href}
-                    className="text-sm text-white/70 hover:text-primary transition-colors"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
           </div>
 
           {/* Perusahaan */}

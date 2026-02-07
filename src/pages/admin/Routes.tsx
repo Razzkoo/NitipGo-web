@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Plus, Edit2, Check, X } from "lucide-react";
+import { MapPin, Plus, Edit2, Check, X, ArrowRight } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CountUp } from "@/components/ui/CountUp";
@@ -16,17 +17,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const initialCities = [
-  { id: 1, name: "Jakarta", province: "DKI Jakarta", active: true, travelers: 245, orders: 1250 },
-  { id: 2, name: "Bandung", province: "Jawa Barat", active: true, travelers: 189, orders: 890 },
-  { id: 3, name: "Surabaya", province: "Jawa Timur", active: true, travelers: 156, orders: 720 },
-  { id: 4, name: "Yogyakarta", province: "DI Yogyakarta", active: true, travelers: 134, orders: 650 },
-  { id: 5, name: "Semarang", province: "Jawa Tengah", active: true, travelers: 98, orders: 420 },
-  { id: 6, name: "Malang", province: "Jawa Timur", active: true, travelers: 87, orders: 380 },
-  { id: 7, name: "Medan", province: "Sumatera Utara", active: true, travelers: 76, orders: 310 },
-  { id: 8, name: "Bali", province: "Bali", active: true, travelers: 112, orders: 540 },
-  { id: 9, name: "Makassar", province: "Sulawesi Selatan", active: false, travelers: 23, orders: 45 },
-  { id: 10, name: "Palembang", province: "Sumatera Selatan", active: false, travelers: 18, orders: 32 },
+const initialRoutes = [
+  { id: 1, fromCity: "Jakarta", toCity: "Bandung", active: true, travelers: 245, orders: 1250 },
+  { id: 2, fromCity: "Bandung", toCity: "Jakarta", active: true, travelers: 189, orders: 890 },
+  { id: 3, fromCity: "Surabaya", toCity: "Malang", active: true, travelers: 156, orders: 720 },
+  { id: 4, fromCity: "Yogyakarta", toCity: "Semarang", active: true, travelers: 134, orders: 650 },
+  { id: 5, fromCity: "Semarang", toCity: "Solo", active: true, travelers: 98, orders: 420 },
+  { id: 6, fromCity: "Malang", toCity: "Surabaya", active: true, travelers: 87, orders: 380 },
+  { id: 7, fromCity: "Medan", toCity: "Padang", active: true, travelers: 76, orders: 310 },
+  { id: 8, fromCity: "Bali", toCity: "Jakarta", active: true, travelers: 112, orders: 540 },
+  { id: 9, fromCity: "Makassar", toCity: "Manado", active: false, travelers: 23, orders: 45 },
+  { id: 10, fromCity: "Palembang", toCity: "Lampung", active: false, travelers: 18, orders: 32 },
 ];
 
 const staggerContainer = {
@@ -44,49 +45,49 @@ const staggerItem = {
 
 export default function AdminRoutes() {
   const { toast } = useToast();
-  const [cities, setCities] = useState(initialCities);
+  const [routes, setRoutes] = useState(initialRoutes);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [newCity, setNewCity] = useState({ name: "", province: "" });
+  const [newRoute, setNewRoute] = useState({ fromCity: "", toCity: "" });
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editValue, setEditValue] = useState({ name: "", province: "" });
+  const [editValue, setEditValue] = useState({ fromCity: "", toCity: "" });
 
-  const handleAddCity = () => {
-    if (newCity.name && newCity.province) {
-      setCities([...cities, {
+  const handleAddRoute = () => {
+    if (newRoute.fromCity && newRoute.toCity) {
+      setRoutes([...routes, {
         id: Date.now(),
-        name: newCity.name,
-        province: newCity.province,
+        fromCity: newRoute.fromCity,
+        toCity: newRoute.toCity,
         active: true,
         travelers: 0,
         orders: 0,
       }]);
-      toast({ title: "Kota Ditambahkan", description: `${newCity.name} berhasil ditambahkan.` });
-      setNewCity({ name: "", province: "" });
+      toast({ title: "Rute Ditambahkan", description: `Rute ${newRoute.fromCity} → ${newRoute.toCity} berhasil ditambahkan.` });
+      setNewRoute({ fromCity: "", toCity: "" });
       setShowAddDialog(false);
     }
   };
 
   const handleToggleActive = (id: number) => {
-    setCities(cities.map(city => 
-      city.id === id ? { ...city, active: !city.active } : city
+    setRoutes(routes.map(route => 
+      route.id === id ? { ...route, active: !route.active } : route
     ));
-    const city = cities.find(c => c.id === id);
+    const route = routes.find(r => r.id === id);
     toast({
-      title: city?.active ? "Kota Dinonaktifkan" : "Kota Diaktifkan",
-      description: `${city?.name} telah ${city?.active ? "dinonaktifkan" : "diaktifkan"}.`,
+      title: route?.active ? "Rute Dinonaktifkan" : "Rute Diaktifkan",
+      description: `Rute ${route?.fromCity} → ${route?.toCity} telah ${route?.active ? "dinonaktifkan" : "diaktifkan"}.`,
     });
   };
 
-  const handleEdit = (city: any) => {
-    setEditingId(city.id);
-    setEditValue({ name: city.name, province: city.province });
+  const handleEdit = (route: any) => {
+    setEditingId(route.id);
+    setEditValue({ fromCity: route.fromCity, toCity: route.toCity });
   };
 
   const handleSaveEdit = (id: number) => {
-    setCities(cities.map(city =>
-      city.id === id ? { ...city, ...editValue } : city
+    setRoutes(routes.map(route =>
+      route.id === id ? { ...route, ...editValue } : route
     ));
-    toast({ title: "Kota Diperbarui" });
+    toast({ title: "Rute Diperbarui" });
     setEditingId(null);
   };
 
@@ -99,12 +100,12 @@ export default function AdminRoutes() {
           className="flex flex-col md:flex-row md:items-center md:justify-between mb-6"
         >
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Kota & Rute</h1>
-            <p className="text-muted-foreground">Kelola kota yang tersedia di platform</p>
+            <h1 className="text-2xl font-bold text-foreground">Rute Perjalanan</h1>
+            <p className="text-muted-foreground">Kelola rute perjalanan yang tersedia di platform</p>
           </div>
           <Button onClick={() => setShowAddDialog(true)} className="mt-4 md:mt-0">
             <Plus className="h-4 w-4 mr-2" />
-            Tambah Kota
+            Tambah Rute
           </Button>
         </motion.div>
 
@@ -116,26 +117,26 @@ export default function AdminRoutes() {
           className="grid gap-4 md:grid-cols-3 mb-6"
         >
           <div className="rounded-xl bg-card p-4 shadow-card hover:shadow-card-hover transition-shadow">
-            <p className="text-sm text-muted-foreground">Total Kota</p>
+            <p className="text-sm text-muted-foreground">Total Rute</p>
             <p className="text-2xl font-bold text-foreground">
-              <CountUp end={cities.length} duration={1000} />
+              <CountUp end={routes.length} duration={1000} />
             </p>
           </div>
           <div className="rounded-xl bg-card p-4 shadow-card hover:shadow-card-hover transition-shadow">
-            <p className="text-sm text-muted-foreground">Kota Aktif</p>
+            <p className="text-sm text-muted-foreground">Rute Aktif</p>
             <p className="text-2xl font-bold text-success">
-              <CountUp end={cities.filter(c => c.active).length} duration={1000} />
+              <CountUp end={routes.filter(r => r.active).length} duration={1000} />
             </p>
           </div>
           <div className="rounded-xl bg-card p-4 shadow-card hover:shadow-card-hover transition-shadow">
             <p className="text-sm text-muted-foreground">Total Traveler</p>
             <p className="text-2xl font-bold text-primary">
-              <CountUp end={cities.reduce((sum, c) => sum + c.travelers, 0)} duration={1500} />
+              <CountUp end={routes.reduce((sum, r) => sum + r.travelers, 0)} duration={1500} />
             </p>
           </div>
         </motion.div>
 
-        {/* City List */}
+        {/* Route List */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -146,8 +147,8 @@ export default function AdminRoutes() {
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="text-left p-4 font-medium text-muted-foreground">Kota</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground">Provinsi</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Kota Asal</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Kota Tujuan</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Traveler</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Order</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
@@ -155,47 +156,50 @@ export default function AdminRoutes() {
                 </tr>
               </thead>
               <motion.tbody variants={staggerContainer} initial="hidden" animate="show">
-                {cities.map((city) => (
+                {routes.map((route) => (
                   <motion.tr 
-                    key={city.id} 
+                    key={route.id} 
                     variants={staggerItem}
                     className="border-t border-border hover:bg-muted/30 transition-colors"
                   >
                     <td className="p-4">
-                      {editingId === city.id ? (
+                      {editingId === route.id ? (
                         <Input
-                          value={editValue.name}
-                          onChange={(e) => setEditValue({ ...editValue, name: e.target.value })}
+                          value={editValue.fromCity}
+                          onChange={(e) => setEditValue({ ...editValue, fromCity: e.target.value })}
                           className="h-8"
                         />
                       ) : (
                         <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-primary" />
-                          <span className="font-medium text-foreground">{city.name}</span>
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium text-foreground">{route.fromCity}</span>
                         </div>
                       )}
                     </td>
                     <td className="p-4">
-                      {editingId === city.id ? (
+                      {editingId === route.id ? (
                         <Input
-                          value={editValue.province}
-                          onChange={(e) => setEditValue({ ...editValue, province: e.target.value })}
+                          value={editValue.toCity}
+                          onChange={(e) => setEditValue({ ...editValue, toCity: e.target.value })}
                           className="h-8"
                         />
                       ) : (
-                        <span className="text-muted-foreground">{city.province}</span>
+                        <div className="flex items-center gap-2">
+                          <ArrowRight className="h-4 w-4 text-primary" />
+                          <span className="font-medium text-primary">{route.toCity}</span>
+                        </div>
                       )}
                     </td>
-                    <td className="p-4 text-foreground">{city.travelers}</td>
-                    <td className="p-4 text-foreground">{city.orders}</td>
+                    <td className="p-4 text-foreground">{route.travelers}</td>
+                    <td className="p-4 text-foreground">{route.orders}</td>
                     <td className="p-4">
-                      <StatusBadge status={city.active ? "active" : "inactive"} size="sm" />
+                      <StatusBadge status={route.active ? "active" : "inactive"} size="sm" />
                     </td>
                     <td className="p-4">
                       <div className="flex justify-end gap-2">
-                        {editingId === city.id ? (
+                        {editingId === route.id ? (
                           <>
-                            <Button variant="ghost" size="sm" onClick={() => handleSaveEdit(city.id)}>
+                            <Button variant="ghost" size="sm" onClick={() => handleSaveEdit(route.id)}>
                               <Check className="h-4 w-4 text-success" />
                             </Button>
                             <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
@@ -204,15 +208,15 @@ export default function AdminRoutes() {
                           </>
                         ) : (
                           <>
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(city)}>
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(route)}>
                               <Edit2 className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleToggleActive(city.id)}
+                              onClick={() => handleToggleActive(route.id)}
                             >
-                              {city.active ? "Nonaktifkan" : "Aktifkan"}
+                              {route.active ? "Nonaktifkan" : "Aktifkan"}
                             </Button>
                           </>
                         )}
@@ -225,34 +229,38 @@ export default function AdminRoutes() {
           </div>
         </motion.div>
 
-        {/* Add City Dialog */}
+        {/* Add Route Dialog */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Tambah Kota Baru</DialogTitle>
-              <DialogDescription>Tambahkan kota baru ke dalam platform NitipGo</DialogDescription>
+              <DialogTitle>Tambah Rute Baru</DialogTitle>
+              <DialogDescription>Tambahkan rute perjalanan baru ke dalam platform NitipGo</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium">Nama Kota</label>
+                <Label htmlFor="from-city">Kota Asal</Label>
                 <Input
-                  placeholder="Contoh: Palembang"
-                  value={newCity.name}
-                  onChange={(e) => setNewCity({ ...newCity, name: e.target.value })}
+                  id="from-city"
+                  placeholder="Contoh: Jakarta"
+                  value={newRoute.fromCity}
+                  onChange={(e) => setNewRoute({ ...newRoute, fromCity: e.target.value })}
+                  className="mt-1.5"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Provinsi</label>
+                <Label htmlFor="to-city">Kota Tujuan</Label>
                 <Input
-                  placeholder="Contoh: Sumatera Selatan"
-                  value={newCity.province}
-                  onChange={(e) => setNewCity({ ...newCity, province: e.target.value })}
+                  id="to-city"
+                  placeholder="Contoh: Bandung"
+                  value={newRoute.toCity}
+                  onChange={(e) => setNewRoute({ ...newRoute, toCity: e.target.value })}
+                  className="mt-1.5"
                 />
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowAddDialog(false)}>Batal</Button>
-              <Button onClick={handleAddCity}>Tambah</Button>
+              <Button onClick={handleAddRoute}>Tambah Rute</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

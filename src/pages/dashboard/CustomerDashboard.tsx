@@ -71,24 +71,14 @@ export default function CustomerDashboard() {
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row md:items-center md:justify-between mb-8"
+          className="mb-8"
         >
-          <div>
-            <h1 className="text-2xl font-bold text-foreground md:text-3xl">
-              Dashboard Customer
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Selamat datang kembali! Kelola pesanan Anda di sini.
-            </p>
-          </div>
-          <div className="flex items-center gap-3 mt-4 md:mt-0">
-            <Button variant="hero" asChild className="shadow-lg shadow-accent/30">
-              <Link to="/order/new">
-                <Plus className="h-5 w-5 mr-1" />
-                Buat Order
-              </Link>
-            </Button>
-          </div>
+          <h1 className="text-2xl font-bold text-foreground md:text-3xl">
+            Dashboard Customer
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Selamat datang kembali! Kelola pesanan Anda di sini.
+          </p>
         </motion.div>
 
         {/* Stats */}
@@ -123,20 +113,35 @@ export default function CustomerDashboard() {
           ))}
         </motion.div>
 
-        {/* Quick Actions */}
+        {/* CTA - Buat Order - Centered */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="flex justify-center mb-8"
+        >
+          <Button variant="hero" size="lg" asChild className="shadow-lg shadow-accent/30">
+            <Link to="/order/new">
+              <Plus className="h-5 w-5 mr-2" />
+              Buat Order Baru
+            </Link>
+          </Button>
+        </motion.div>
+
+        {/* Quick Actions - Centered */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="grid gap-4 md:grid-cols-2 mb-8"
+          className="grid gap-4 md:grid-cols-2 mb-8 max-w-3xl mx-auto"
         >
           <motion.div
             whileHover={{ scale: 1.02, y: -4 }}
             transition={{ duration: 0.2 }}
             className="rounded-2xl bg-gradient-primary p-6 text-primary-foreground cursor-pointer"
           >
-            <Link to="/order/new" className="block">
-              <Package className="h-10 w-10 mb-4" />
+            <Link to="/order/new" className="block text-center">
+              <Package className="h-10 w-10 mb-4 mx-auto" />
               <h3 className="text-xl font-semibold mb-2">Titip Beli Barang</h3>
               <p className="text-primary-foreground/80 mb-4">
                 Minta traveler membelikan barang dari kota lain
@@ -152,8 +157,8 @@ export default function CustomerDashboard() {
             transition={{ duration: 0.2 }}
             className="rounded-2xl bg-gradient-to-br from-accent to-accent/80 p-6 text-accent-foreground cursor-pointer"
           >
-            <Link to="/order/new" className="block">
-              <MapPin className="h-10 w-10 mb-4" />
+            <Link to="/order/new" className="block text-center">
+              <MapPin className="h-10 w-10 mb-4 mx-auto" />
               <h3 className="text-xl font-semibold mb-2">Kirim Barang</h3>
               <p className="text-accent-foreground/80 mb-4">
                 Titipkan barang Anda ke traveler yang bepergian

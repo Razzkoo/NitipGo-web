@@ -514,7 +514,7 @@ export default function Index() {
                 transition={{ delay: 0.2 }}
                 className="text-3xl font-bold text-primary-foreground md:text-4xl"
               >
-                Siap Mulai Kirim atau Jadi Traveler?
+                Siap Mulai Kirim Barang?
               </motion.h2>
               <motion.p 
                 initial={{ opacity: 0, y: 20 }}
@@ -545,7 +545,7 @@ export default function Index() {
                   </Link>
                 </Button>
                 <Button variant="outline" size="lg" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" asChild>
-                  <Link to="/daftar-traveler">Jadi Traveler</Link>
+                  <Link to="/cara-kerja">Pelajari Lebih Lanjut</Link>
                 </Button>
               </motion.div>
             </div>

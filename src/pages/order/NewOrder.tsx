@@ -1,19 +1,23 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Package, MapPin, Calendar, Upload, Info, ArrowRight, CheckCircle } from "lucide-react";
+import { ArrowLeft, Package, MapPin, Calendar, Upload, Info, ArrowRight, CheckCircle, AlertCircle } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const pickupPoints = [
   { id: "1", name: "Mitra Pos Cikini", address: "Jl. Cikini Raya No. 45" },
   { id: "2", name: "Mitra Pos Menteng", address: "Jl. Menteng Raya No. 12" },
   { id: "3", name: "Titik Temu Stasiun Gambir", address: "Lobi Utama Stasiun" },
 ];
+
+// Simulate auth state - in real app this would come from auth context
+const isLoggedIn = true; // Set to false to test guest view
 
 export default function NewOrder() {
   const navigate = useNavigate();
@@ -41,6 +45,41 @@ export default function NewOrder() {
       setSubmitted(true);
     }
   };
+
+  // If guest, show login prompt
+  if (!isLoggedIn) {
+    return (
+      <DashboardLayout role="customer">
+        <div className="p-6 md:p-8 lg:p-10">
+          <div className="max-w-md mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl bg-card p-8 shadow-card text-center"
+            >
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-warning/20 mx-auto mb-6">
+                <AlertCircle className="h-8 w-8 text-warning" />
+              </div>
+              <h2 className="text-xl font-bold text-foreground mb-2">
+                Login Diperlukan
+              </h2>
+              <p className="text-muted-foreground mb-6">
+                Anda harus login sebagai customer terlebih dahulu untuk membuat order.
+              </p>
+              <div className="flex flex-col gap-3">
+                <Button variant="hero" asChild>
+                  <Link to="/login">Login Sekarang</Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/register">Daftar Gratis</Link>
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout role="customer">
