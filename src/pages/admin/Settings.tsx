@@ -123,43 +123,6 @@ export default function AdminSettings() {
             whileHover={{ y: -2, transition: { duration: 0.2 } }}
             className="rounded-2xl bg-card p-6 shadow-card hover:shadow-card-hover transition-all"
           >
-            <div className="flex items-center gap-3 mb-6">
-              <motion.div 
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10"
-              >
-                <Shield className="h-5 w-5 text-accent" />
-              </motion.div>
-              <h2 className="text-lg font-semibold text-foreground">Sistem</h2>
-            </div>
-            <div className="space-y-4">
-              <motion.div 
-                whileHover={{ x: 4, transition: { duration: 0.2 } }}
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div>
-                  <p className="font-medium text-foreground">Auto Verifikasi Traveler</p>
-                  <p className="text-sm text-muted-foreground">Otomatis verifikasi traveler baru</p>
-                </div>
-                <Switch
-                  checked={settings.autoVerifyTraveler}
-                  onCheckedChange={(checked) => handleChange("autoVerifyTraveler", checked)}
-                />
-              </motion.div>
-              <motion.div 
-                whileHover={{ x: 4, transition: { duration: 0.2 } }}
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
-              >
-                <div>
-                  <p className="font-medium text-foreground">Mode Maintenance</p>
-                  <p className="text-sm text-muted-foreground">Nonaktifkan platform sementara</p>
-                </div>
-                <Switch
-                  checked={settings.maintenanceMode}
-                  onCheckedChange={(checked) => handleChange("maintenanceMode", checked)}
-                />
-              </motion.div>
-            </div>
           </motion.div>
         </div>
       </div>
