@@ -1,555 +1,544 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, MapPin, Star, MessageSquare, CheckCircle, Clock, ArrowRight, Phone, RefreshCw, Send } from "lucide-react";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  ArrowLeft, ArrowRight, Package, MapPin, Calendar, Clock,
+  Phone, Mail, User, CheckCircle, Loader2, ExternalLink,
+  Star, Send, RefreshCw, XCircle,
+} from "lucide-react";
+import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import api from "@/lib/api";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import logoBni from "@/assets/providers/BNI.png";
+import logoDana from "@/assets/providers/Dana.png";
+import logoGopay from "@/assets/providers/Gopay.png";
+import logoMandiri from "@/assets/providers/Mandiri.png";
+import logoOvo from "@/assets/providers/OVO.png";
+import logoBca from "@/assets/providers/BCA.png";
 
-// Mock order data
-const mockOrders: Record<string, any> = {
-  "ORD-001": {
-    id: "ORD-001",
-    item: "Sepatu Nike Air Max",
-    description: "Nike Air Max 90, warna putih, size 42",
-    weight: "1.5 kg",
-    from: "Jakarta",
-    to: "Bandung",
-    status: "in_progress",
-    traveler: {
-      name: "Andi Pratama",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=andi",
-      phone: "0812-3456-7890",
-      rating: 4.9,
-      totalReviews: 127,
-    },
-    pickupPoint: "Mitra Pos Cikini, Jl. Cikini Raya No. 45",
-    price: "Rp 45.000",
-    createdAt: "15 Feb 2024, 10:30",
-    estimatedArrival: "15 Feb 2024, 16:00",
-    hasRated: false,
-    timeline: [
-      { status: "Order dibuat", time: "15 Feb, 10:30", completed: true },
-      { status: "Dikonfirmasi traveler", time: "15 Feb, 10:45", completed: true },
-      { status: "Barang diambil", time: "15 Feb, 12:00", completed: true },
-      { status: "Dalam perjalanan", time: "15 Feb, 12:30", completed: true },
-      { status: "Sampai tujuan", time: "-", completed: false },
-    ],
-  },
-  "ORD-002": {
-    id: "ORD-002",
-    item: "Oleh-oleh Jogja",
-    description: "Bakpia Pathok, 5 kotak",
-    weight: "2 kg",
-    from: "Yogyakarta",
-    to: "Jakarta",
-    status: "completed",
-    traveler: {
-      name: "Sari Dewi",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sari",
-      phone: "0813-4567-8901",
-      rating: 4.8,
-      totalReviews: 89,
-    },
-    pickupPoint: "Titik Temu Stasiun Gambir",
-    price: "Rp 50.000",
-    createdAt: "10 Feb 2024, 08:00",
-    estimatedArrival: "10 Feb 2024, 14:00",
-    hasRated: false,
-    timeline: [
-      { status: "Order dibuat", time: "10 Feb, 08:00", completed: true },
-      { status: "Dikonfirmasi traveler", time: "10 Feb, 08:15", completed: true },
-      { status: "Barang diambil", time: "10 Feb, 09:00", completed: true },
-      { status: "Dalam perjalanan", time: "10 Feb, 09:30", completed: true },
-      { status: "Sampai tujuan", time: "10 Feb, 13:45", completed: true },
-    ],
-  },
-  "ORD-003": {
-    id: "ORD-003",
-    item: "Sepatu Adidas",
-    description: "Adidas Ultraboost, size 43",
-    weight: "1.2 kg",
-    from: "Surabaya",
-    to: "Jakarta",
-    status: "completed",
-    traveler: {
-      name: "Budi Santoso",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=budi",
-      phone: "0814-5678-9012",
-      rating: 4.7,
-      totalReviews: 65,
-    },
-    pickupPoint: "Titik Temu Stasiun Pasar Senen",
-    price: "Rp 65.000",
-    createdAt: "5 Feb 2024, 09:00",
-    estimatedArrival: "5 Feb 2024, 18:00",
-    hasRated: true,
-    userRating: 4,
-    userReview: "Pengiriman cepat dan aman, barang sampai dengan baik!",
-    timeline: [
-      { status: "Order dibuat", time: "5 Feb, 09:00", completed: true },
-      { status: "Dikonfirmasi traveler", time: "5 Feb, 09:20", completed: true },
-      { status: "Barang diambil", time: "5 Feb, 10:00", completed: true },
-      { status: "Dalam perjalanan", time: "5 Feb, 10:30", completed: true },
-      { status: "Sampai tujuan", time: "5 Feb, 17:30", completed: true },
-    ],
-  },
-};
+const BASE_URL = (api.defaults.baseURL ?? "http://localhost:8000/api").replace("/api", "");
 
-const statusConfig: Record<string, { label: string; className: string }> = {
-  pending: { label: "Menunggu Konfirmasi", className: "bg-warning/20 text-warning font-semibold" },
-  in_progress: { label: "Dalam Proses", className: "bg-info/20 text-info font-semibold" },
-  completed: { label: "Selesai", className: "bg-success/20 text-success font-semibold" },
-  cancelled: { label: "Dibatalkan", className: "bg-destructive/20 text-destructive font-semibold" },
-};
-
-// Star Rating Component
-function StarRating({ 
-  rating, 
-  onRatingChange, 
-  readonly = false,
-  size = "default"
-}: { 
-  rating: number; 
-  onRatingChange?: (rating: number) => void;
-  readonly?: boolean;
-  size?: "sm" | "default" | "lg";
-}) {
-  const [hoverRating, setHoverRating] = useState(0);
-  
-  const sizeClasses = {
-    sm: "h-4 w-4",
-    default: "h-8 w-8",
-    lg: "h-10 w-10",
-  };
-
-  return (
-    <div className="flex gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <motion.button
-          key={star}
-          type="button"
-          disabled={readonly}
-          onClick={() => onRatingChange?.(star)}
-          onMouseEnter={() => !readonly && setHoverRating(star)}
-          onMouseLeave={() => !readonly && setHoverRating(0)}
-          whileHover={!readonly ? { scale: 1.15 } : {}}
-          whileTap={!readonly ? { scale: 0.95 } : {}}
-          className={`p-0.5 transition-colors ${readonly ? "cursor-default" : "cursor-pointer"}`}
-        >
-          <Star 
-            className={`${sizeClasses[size]} transition-all duration-200 ${
-              star <= (hoverRating || rating) 
-                ? "fill-warning text-warning drop-shadow-sm" 
-                : "text-muted-foreground/40"
-            }`} 
-          />
-        </motion.button>
-      ))}
-    </div>
-  );
+function getAvatar(photo: string | null, name: string) {
+  if (photo) return `${BASE_URL}/storage/${photo}`;
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
 }
 
-export default function OrderDetail() {
+function formatDate(d: string | null) {
+  if (!d) return "-";
+  return new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function formatTime(d: string | null) {
+  if (!d) return "-";
+  return new Date(d).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatRupiah(v: string | number | null) {
+  if (!v) return "Rp 0";
+  return "Rp " + Number(v).toLocaleString("id-ID");
+}
+
+const statusLabel: Record<string, string> = {
+  pending: "Menunggu Konfirmasi Traveler",
+  on_progress: "Sedang Diproses",
+  on_the_way: "Dalam Perjalanan",
+  finished: "Selesai",
+  cancelled: "Dibatalkan",
+};
+
+// Provider logo
+const providerLogos: Record<string, string> = {
+  bca: logoBca, bni: logoBni, mandiri: logoMandiri,
+  ovo: logoOvo, dana: logoDana, gopay: logoGopay,
+};
+
+const providerLabels: Record<string, string> = {
+  bca: "BCA", bni: "BNI", mandiri: "Mandiri",
+  ovo: "OVO", dana: "DANA", gopay: "GoPay",
+};
+
+export default function CustomerOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const orderId = id?.toUpperCase() || "ORD-001";
-  const [order, setOrder] = useState(mockOrders[orderId] || mockOrders["ORD-001"]);
-  const [showRating, setShowRating] = useState(false);
-  const [rating, setRating] = useState(0);
-  const [review, setReview] = useState("");
-  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
 
-  const handleConfirmReceived = () => {
-    // Update order status to completed
-    setOrder((prev: any) => ({
-      ...prev,
-      status: "completed",
-      timeline: prev.timeline.map((item: any, index: number) => 
-        index === prev.timeline.length - 1 
-          ? { ...item, completed: true, time: new Date().toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) }
-          : item
-      ),
-    }));
-    
-    toast({
-      title: "✅ Barang Dikonfirmasi",
-      description: "Terima kasih! Silakan beri rating untuk traveler.",
-    });
-    setShowRating(true);
-  };
+  const [order, setOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [cancelDialog, setCancelDialog] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
 
-  const handleSubmitRating = async () => {
-    if (rating === 0) {
-      toast({
-        title: "Pilih Rating",
-        description: "Silakan pilih jumlah bintang terlebih dahulu",
-        variant: "destructive",
-      });
-      return;
+  // Payment order
+  const [paymentFile, setPaymentFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
+
+
+  useEffect(() => {
+    if (id) fetchOrder();
+  }, [id]);
+
+  const fetchOrder = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(`/customer/orders/${id}`);
+      setOrder(res.data.data);
+    } catch {
+      toast({ title: "Gagal memuat order", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
-
-    setIsSubmittingRating(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Update order with rating
-    setOrder((prev: any) => ({
-      ...prev,
-      hasRated: true,
-      userRating: rating,
-      userReview: review,
-    }));
-
-    toast({
-      title: "⭐ Rating Terkirim!",
-      description: `Anda memberi ${rating} bintang untuk ${order.traveler.name}. Terima kasih atas ulasan Anda!`,
-    });
-    
-    setIsSubmittingRating(false);
-    setShowRating(false);
   };
 
-  const handleUpdateStatus = () => {
-    toast({
-      title: "🔄 Status Diperbarui",
-      description: "Status pengiriman berhasil diperbarui.",
-    });
+  // Handle cancel order 
+  const handleCancel = async () => {
+    setCancelling(true);
+    try {
+      await api.patch(`/customer/orders/${id}/cancel`);
+      toast({ title: "Order dibatalkan" });
+      fetchOrder();
+    } catch (err: any) {
+      toast({ title: err?.response?.data?.message ?? "Gagal", variant: "destructive" });
+    } finally {
+      setCancelling(false);
+      setCancelDialog(false);
+    }
   };
 
-  const handleChatTraveler = () => {
-    navigate("/live-chat");
+  // Handle upload payment order
+  const handleUploadPayment = async () => {
+    if (!paymentFile) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("payment_proof", paymentFile);
+      await api.post(`/customer/orders/${id}/payment`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast({ title: "Bukti pembayaran berhasil diupload" });
+      setPaymentFile(null);
+      fetchOrder();
+    } catch (err: any) {
+      toast({ title: err?.response?.data?.message ?? "Gagal upload", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const canRate = order.status === "completed" && !order.hasRated;
+  if (loading) {
+    return (
+      <CustomerLayout>
+        <div className="flex justify-center items-center py-32">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </CustomerLayout>
+    );
+  }
+
+  if (!order) {
+    return (
+      <CustomerLayout>
+        <div className="p-6 text-center py-16">
+          <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">Order tidak ditemukan</h2>
+          <Button variant="outline" asChild><Link to="/orders">Kembali</Link></Button>
+        </div>
+      </CustomerLayout>
+    );
+  }
 
   return (
-    <DashboardLayout role="customer">
+    <CustomerLayout>
       <div className="p-6 md:p-8 lg:p-10">
         <Button variant="ghost" className="mb-6" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Kembali
+          <ArrowLeft className="h-4 w-4 mr-2" /> Kembali
         </Button>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Order Header */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl bg-card p-6 shadow-card"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">{order.id}</p>
-                  <h1 className="text-xl font-bold text-foreground">{order.item}</h1>
-                </div>
-                <span className={`px-3 py-1.5 rounded-full text-sm ${statusConfig[order.status].className}`}>
-                  {statusConfig[order.status].label}
-                </span>
-              </div>
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* Header */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            className="flex items-start justify-between flex-wrap gap-3">
+            <div>
+              <p className="text-sm text-muted-foreground">{order.sku}</p>
+              <h1 className="text-2xl font-bold">{order.name}</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {order.order_type === "titip-beli" ? "Titip Beli" : "Kirim Barang"}
+              </p>
+            </div>
+            <StatusBadge status={order.status} />
+          </motion.div>
 
-              <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/50 mb-4">
-                <div className="flex-1 text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Dari</p>
-                  <p className="font-semibold text-foreground">{order.from}</p>
-                </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                  <ArrowRight className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1 text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Ke</p>
-                  <p className="font-semibold text-foreground">{order.to}</p>
+          {/* Status Info */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+            className={`rounded-xl p-4 text-sm ${
+              order.status === "pending" ? "bg-amber-50 text-amber-700" :
+              order.status === "on_progress" ? "bg-violet-50 text-violet-700" :
+              order.status === "on_the_way" ? "bg-sky-50 text-sky-700" :
+              order.status === "finished" ? "bg-emerald-50 text-emerald-700" :
+              "bg-red-50 text-red-700"
+            }`}>
+            {statusLabel[order.status] ?? order.status}
+          </motion.div>
+
+          {/* Route */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="rounded-2xl bg-card p-5 shadow-card">
+            <div className="flex items-center gap-4 p-3 rounded-xl bg-muted/50 mb-4">
+              <div className="flex-1 text-center">
+                <p className="text-xs text-muted-foreground">Dari</p>
+                <p className="font-semibold">{order.trip?.city}</p>
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <ArrowRight className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1 text-center">
+                <p className="text-xs text-muted-foreground">Ke</p>
+                <p className="font-semibold">{order.trip?.destination}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Berangkat</p>
+                  <p className="font-medium">{formatDate(order.trip?.departure_at)}</p>
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-primary" />
                 <div>
-                  <p className="text-muted-foreground">Berat</p>
-                  <p className="font-medium text-foreground">{order.weight}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Biaya</p>
-                  <p className="font-bold text-primary text-lg">{order.price}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Dibuat</p>
-                  <p className="font-medium text-foreground">{order.createdAt}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Estimasi Tiba</p>
-                  <p className="font-medium text-foreground">{order.estimatedArrival}</p>
+                  <p className="text-xs text-muted-foreground">Estimasi Tiba</p>
+                  <p className="font-medium">{formatDate(order.trip?.estimated_arrival_at)}</p>
                 </div>
               </div>
-            </motion.div>
+            </div>
+          </motion.div>
 
-            {/* Timeline */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="rounded-2xl bg-card p-6 shadow-card"
-            >
-              <h2 className="text-lg font-semibold text-foreground mb-6">Status Pengiriman</h2>
-              <div className="space-y-4">
-                {order.timeline.map((item: any, i: number) => (
-                  <div key={i} className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${item.completed ? "bg-success" : "bg-muted"}`}>
-                        {item.completed ? (
-                          <CheckCircle className="h-4 w-4 text-success-foreground" />
-                        ) : (
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </div>
-                      {i < order.timeline.length - 1 && (
-                        <div className={`w-0.5 h-8 ${item.completed ? "bg-success" : "bg-muted"}`} />
-                      )}
-                    </div>
-                    <div className="flex-1 pb-4">
-                      <p className={`font-medium ${item.completed ? "text-foreground" : "text-muted-foreground"}`}>
-                        {item.status}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{item.time}</p>
-                    </div>
-                  </div>
-                ))}
+          {/* Detail Barang */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+            className="rounded-2xl bg-card p-5 shadow-card">
+            <h3 className="font-semibold mb-3">Detail Barang</h3>
+
+            {order.image && (
+              <div className="mb-3 cursor-pointer" onClick={() => setPhotoOpen(true)}>
+                <img src={`${BASE_URL}/storage/${order.image}`} alt={order.name}
+                  className="w-full h-44 rounded-xl object-cover border hover:opacity-90 transition" />
               </div>
-            </motion.div>
-
-            {/* Already Rated Section */}
-            {order.hasRated && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="rounded-2xl bg-success/10 border-2 border-success/30 p-6"
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <CheckCircle className="h-5 w-5 text-success" />
-                  <h2 className="text-lg font-semibold text-foreground">Rating Telah Diberikan</h2>
-                </div>
-                <div className="flex items-center gap-3 mb-3">
-                  <StarRating rating={order.userRating} readonly size="sm" />
-                  <span className="font-bold text-foreground">{order.userRating}/5</span>
-                </div>
-                {order.userReview && (
-                  <p className="text-muted-foreground italic">"{order.userReview}"</p>
-                )}
-              </motion.div>
             )}
 
-            {/* Rating Section */}
-            <AnimatePresence>
-              {showRating && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20, height: 0 }}
-                  animate={{ opacity: 1, y: 0, height: "auto" }}
-                  exit={{ opacity: 0, y: -20, height: 0 }}
-                  className="rounded-2xl bg-card p-6 shadow-card border-2 border-primary overflow-hidden"
-                >
-                  <div className="flex items-center gap-2 mb-4">
-                    <Star className="h-5 w-5 text-warning fill-warning" />
-                    <h2 className="text-lg font-semibold text-foreground">Beri Rating & Ulasan</h2>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Deskripsi</span>
+                <span className="text-right max-w-[60%]">{order.description}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Berat</span>
+                <span>{order.weight} kg</span>
+              </div>
+              {order.order_type === "titip-beli" && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Jumlah</span>
+                    <span>{order.quantity}</span>
                   </div>
-                  
-                  <p className="text-muted-foreground mb-6">
-                    Bagaimana pengalaman Anda dengan <span className="font-semibold text-foreground">{order.traveler.name}</span>?
-                  </p>
-                  
-                  <div className="mb-6">
-                    <label className="text-sm font-medium text-foreground mb-3 block">Pilih Rating</label>
-                    <StarRating 
-                      rating={rating} 
-                      onRatingChange={setRating}
-                      size="lg"
-                    />
-                    {rating > 0 && (
-                      <motion.p 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-sm text-muted-foreground mt-2"
-                      >
-                        {rating === 1 && "Sangat Buruk 😞"}
-                        {rating === 2 && "Buruk 😕"}
-                        {rating === 3 && "Cukup 😐"}
-                        {rating === 4 && "Baik 🙂"}
-                        {rating === 5 && "Sangat Baik! 🎉"}
-                      </motion.p>
-                    )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Harga Barang</span>
+                    <span>{formatRupiah(order.item_price)}</span>
                   </div>
-
-                  <div className="mb-6">
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                      Ulasan (Opsional)
-                    </label>
-                    <Textarea
-                      placeholder="Ceritakan pengalaman Anda dengan traveler ini..."
-                      value={review}
-                      onChange={(e) => setReview(e.target.value)}
-                      className="min-h-[100px] resize-none"
-                      maxLength={500}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1 text-right">
-                      {review.length}/500 karakter
-                    </p>
-                  </div>
-                  
-                  <div className="flex gap-3">
-                    <Button 
-                      variant="default"
-                      size="lg"
-                      onClick={handleSubmitRating} 
-                      disabled={rating === 0 || isSubmittingRating}
-                      className="flex-1"
-                    >
-                      {isSubmittingRating ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 animate-spin" />
-                          Mengirim...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4" />
-                          Kirim Rating
-                        </>
-                      )}
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      size="lg"
-                      onClick={() => setShowRating(false)}
-                    >
-                      Nanti Saja
-                    </Button>
-                  </div>
-                </motion.div>
+                </>
               )}
-            </AnimatePresence>
-
-            {/* Show Rating Button for Completed Orders */}
-            {canRate && !showRating && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="rounded-2xl bg-gradient-to-br from-warning/20 to-accent/10 border-2 border-warning/30 p-6"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-warning/20">
-                    <Star className="h-6 w-6 text-warning fill-warning" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-foreground">Beri Rating Traveler</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Bantu traveler lain dengan memberikan ulasan
-                    </p>
-                  </div>
+              {order.notes && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Catatan</span>
+                  <span className="text-right max-w-[60%]">{order.notes}</span>
                 </div>
-                <Button 
-                  variant="default"
-                  size="lg"
-                  className="w-full"
-                  onClick={() => setShowRating(true)}
-                >
-                  <Star className="h-4 w-4 mr-2" />
-                  Beri Rating Sekarang
-                </Button>
-              </motion.div>
+              )}
+            </div>
+
+            {order.order_type === "kirim" && order.recipient_name && (
+              <div className="mt-4 pt-4 border-t space-y-2 text-sm">
+                <div className="flex items-center gap-2 mb-1">
+                  <User className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Penerima</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Nama</span>
+                  <span>{order.recipient_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Telepon</span>
+                  <span>{order.recipient_phone}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Alamat</span>
+                  <span className="text-right max-w-[60%]">{order.destination_address}</span>
+                </div>
+              </div>
             )}
-          </div>
+          </motion.div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Traveler Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="rounded-2xl bg-card p-6 shadow-card"
-            >
-              <h2 className="text-lg font-semibold text-foreground mb-4">Traveler</h2>
-              <div className="flex items-center gap-4 mb-4">
-                <img
-                  src={order.traveler.avatar}
-                  alt={order.traveler.name}
-                  className="h-14 w-14 rounded-full bg-muted"
-                />
-                <div>
-                  <p className="font-semibold text-foreground">{order.traveler.name}</p>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Star className="h-4 w-4 fill-warning text-warning" />
-                    <span className="font-medium">{order.traveler.rating}</span>
-                    <span>({order.traveler.totalReviews} ulasan)</span>
-                  </div>
+          {/* Titik COD */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+            className="rounded-2xl bg-card p-5 shadow-card">
+            <h3 className="font-semibold mb-3">Titik COD</h3>
+            <div className="grid md:grid-cols-2 gap-3">
+              {order.collection_point && (
+                <div className="p-3 rounded-xl border">
+                  <p className="text-xs text-muted-foreground mb-1">Pengumpulan</p>
+                  <p className="font-medium text-sm">{order.collection_point.name}</p>
+                  <p className="text-xs text-muted-foreground">{order.collection_point.address}</p>
+                  {order.collection_point.map_url && (
+                    <a href={order.collection_point.map_url} target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-1">
+                      <ExternalLink className="h-3 w-3" /> Maps
+                    </a>
+                  )}
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Button variant="default" className="w-full" onClick={handleChatTraveler}>
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Chat Traveler
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    navigator.clipboard.writeText(order.traveler.phone);
-                    toast({
-                      title: "📋 Nomor Disalin",
-                      description: `Nomor ${order.traveler.phone} disalin ke clipboard`,
-                    });
-                  }}
-                >
-                  <Phone className="h-4 w-4 mr-2" />
-                  {order.traveler.phone}
-                </Button>
+              )}
+              {order.pickup_point && (
+                <div className="p-3 rounded-xl border">
+                  <p className="text-xs text-muted-foreground mb-1">Pengambilan</p>
+                  <p className="font-medium text-sm">{order.pickup_point.name}</p>
+                  <p className="text-xs text-muted-foreground">{order.pickup_point.address}</p>
+                  {order.pickup_point.map_url && (
+                    <a href={order.pickup_point.map_url} target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-1">
+                      <ExternalLink className="h-3 w-3" /> Maps
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Traveler */}
+          {order.traveler && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+              className="rounded-2xl bg-card p-5 shadow-card">
+              <h3 className="font-semibold mb-3">Traveler</h3>
+              <div className="flex items-center gap-4">
+                <img src={getAvatar(order.traveler.profile_photo, order.traveler.name)} alt=""
+                  className="h-12 w-12 rounded-full bg-muted object-cover" />
+                <div className="flex-1">
+                  <p className="font-semibold">{order.traveler.name}</p>
+                  <p className="text-sm text-muted-foreground">{order.traveler.city}</p>
+                  <p className="text-sm text-muted-foreground">{order.traveler.phone}</p>
+                </div>
+                {order.traveler.phone && (
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={`tel:${order.traveler.phone}`}><Phone className="h-4 w-4 mr-1" /> Hubungi</a>
+                  </Button>
+                )}
               </div>
             </motion.div>
+          )}
 
-            {/* Pickup Point */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="rounded-2xl bg-card p-6 shadow-card"
-            >
-              <h2 className="text-lg font-semibold text-foreground mb-4">Titik Pengambilan</h2>
-              <div className="flex items-start gap-3">
-                <MapPin className="h-5 w-5 text-primary mt-0.5" />
-                <p className="text-muted-foreground">{order.pickupPoint}</p>
+          {/* Harga */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+            className="rounded-2xl bg-primary/5 border border-primary/20 p-5">
+            <h3 className="font-semibold mb-3">Rincian Harga</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Biaya Pengiriman</span>
+                <span>{formatRupiah(order.shipping_price)}</span>
               </div>
-            </motion.div>
+              {order.order_type === "titip-beli" && order.item_price && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Harga Barang</span>
+                  <span>{formatRupiah(Number(order.item_price) * order.quantity)}</span>
+                </div>
+              )}
+              <div className="border-t my-2" />
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Total</span>
+                <span className="text-xl font-bold text-primary">{formatRupiah(order.price)}</span>
+              </div>
+            </div>
+          </motion.div>
 
-            {/* Actions for In Progress */}
-            {order.status === "in_progress" && !showRating && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="rounded-2xl bg-gradient-primary p-6 space-y-3"
-              >
-                <p className="text-primary-foreground/90 mb-4">
-                  Sudah menerima barang? Konfirmasi untuk menyelesaikan order.
+          {order.order_type === "titip-beli" && order.status === "on_progress" && order.price_confirmed && !order.paid_at && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl bg-amber-50 border-2 border-amber-300 p-5 space-y-4">
+              <div>
+                <h3 className="font-bold text-amber-800 text-lg">Pembayaran Diperlukan</h3>
+                <p className="text-sm text-amber-700 mt-1">
+                  Traveler sudah mengkonfirmasi harga barang. Silakan transfer dan upload bukti pembayaran.
                 </p>
-                <Button variant="white" className="w-full shadow-lg" onClick={handleConfirmReceived}>
-                  <CheckCircle className="h-5 w-5 mr-2" />
-                  Konfirmasi Barang Diterima
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10"
-                  onClick={handleUpdateStatus}
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh Status
-                </Button>
-              </motion.div>
+              </div>
+
+              {/* Struk dari traveler */}
+              {order.order_process?.receipt_photo && (
+                <div>
+                  <p className="text-xs font-semibold text-amber-800 mb-1">Struk Belanja dari Traveler</p>
+                  <img
+                    src={`${BASE_URL}/storage/${order.order_process.receipt_photo}`}
+                    alt="Struk"
+                    className="w-full h-40 rounded-lg object-cover border cursor-pointer hover:opacity-90"
+                    onClick={() => setReceiptOpen(true)}
+                  />
+                  {order.order_process.price_notes && (
+                    <p className="text-xs text-amber-600 mt-1">Catatan: {order.order_process.price_notes}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Total */}
+              <div className="rounded-lg bg-white p-3 border">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Biaya Pengiriman</span>
+                  <span>{formatRupiah(order.shipping_price)}</span>
+                </div>
+                <div className="flex justify-between text-sm mt-1">
+                  <span className="text-muted-foreground">Harga Barang (final)</span>
+                  <span>{formatRupiah(Number(order.item_price) * order.quantity)}</span>
+                </div>
+                <div className="border-t my-2" />
+                <div className="flex justify-between">
+                  <span className="font-semibold">Total Bayar</span>
+                  <span className="text-lg font-bold text-primary">{formatRupiah(order.price)}</span>
+                </div>
+              </div>
+
+              {/* Rekening Traveler */}
+              {order.traveler?.payout_accounts && order.traveler.payout_accounts.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-amber-800">Transfer ke Rekening Traveler</p>
+                  {order.traveler.payout_accounts.map((acc: any) => {
+                    const logo = providerLogos[acc.provider];
+                    return (
+                      <div key={acc.id} className="flex items-center gap-3 p-3 rounded-xl bg-white border">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-50 border border-zinc-100 overflow-hidden shrink-0">
+                          {logo ? (
+                            <img src={logo} alt={acc.provider} className="h-7 w-7 object-contain" />
+                          ) : (
+                            <span className="text-xs font-bold text-zinc-400">{(acc.provider ?? "").toUpperCase().slice(0, 3)}</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold">{providerLabels[acc.provider] ?? (acc.provider ?? "").toUpperCase()}</p>
+                            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                              acc.payout_type === "bank" ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600"
+                            }`}>
+                              {acc.payout_type === "bank" ? "Bank" : "E-Wallet"}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">{acc.account_name}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-mono font-bold">{acc.account_number}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Upload Bukti */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-amber-800">Upload Bukti Transfer *</Label>
+                <label className="flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-amber-300 bg-white cursor-pointer hover:border-amber-400 transition">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => setPaymentFile(e.target.files?.[0] || null)}
+                  />
+                  <Package className="h-5 w-5 text-amber-500" />
+                  <span className="text-sm text-amber-700">
+                    {paymentFile ? paymentFile.name : "Klik untuk upload bukti transfer"}
+                  </span>
+                </label>
+              </div>
+
+              <Button
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+                disabled={uploading || !paymentFile}
+                onClick={handleUploadPayment}
+              >
+                {uploading ? "Mengupload..." : "Upload Bukti Pembayaran"}
+              </Button>
+            </motion.div>
+          )}
+
+          {order.order_type === "titip-beli" && order.paid_at && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              className="rounded-xl bg-emerald-50 border border-emerald-200 p-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-emerald-600" />
+                <p className="text-sm text-emerald-700 font-medium">Pembayaran berhasil. Traveler akan segera mengirim barang.</p>
+              </div>
+              {order.payment_proof && (
+                <img
+                  src={`${BASE_URL}/storage/${order.payment_proof}`}
+                  alt="Bukti bayar"
+                  className="w-full h-32 rounded-lg object-cover border mt-3 cursor-pointer"
+                  onClick={() => setPhotoOpen(true)}
+                />
+              )}
+            </motion.div>
+          )}
+
+          {/* Actions */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+            className="flex items-center gap-3 flex-wrap">
+            {order.status === "pending" && (
+              <Button variant="destructive" onClick={() => setCancelDialog(true)}>
+                <XCircle className="h-4 w-4 mr-1.5" /> Batalkan Order
+              </Button>
             )}
-          </div>
+            {order.status === "on_the_way" && (
+              <Button asChild>
+                <Link to={`/order/${order.id}/tracking`}>
+                  <MapPin className="h-4 w-4 mr-1.5" /> Lihat Tracking
+                </Link>
+              </Button>
+            )}
+          </motion.div>
         </div>
+
+        {/* Cancel Dialog */}
+        <Dialog open={cancelDialog} onOpenChange={setCancelDialog}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Batalkan Order</DialogTitle>
+              <DialogDescription>Yakin membatalkan order {order.sku}?</DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setCancelDialog(false)}>Kembali</Button>
+              <Button variant="destructive" className="flex-1" disabled={cancelling} onClick={handleCancel}>
+                {cancelling ? "Memproses..." : "Ya, Batalkan"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Photo Dialog */}
+        {order.image && (
+          <Dialog open={photoOpen} onOpenChange={setPhotoOpen}>
+            <DialogContent className="max-w-3xl p-0 overflow-hidden">
+              <img src={`${BASE_URL}/storage/${order.image}`} alt={order.name} className="w-full object-contain" />
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {order.order_process?.receipt_photo && (
+          <Dialog open={receiptOpen} onOpenChange={setReceiptOpen}>
+            <DialogContent className="max-w-3xl p-0 overflow-hidden">
+              <img src={`${BASE_URL}/storage/${order.order_process.receipt_photo}`} alt="Struk" className="w-full object-contain" />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
-    </DashboardLayout>
+    </CustomerLayout>
   );
 }

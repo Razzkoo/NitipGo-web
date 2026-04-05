@@ -1,3 +1,10 @@
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Package, MapPin, Clock, CheckCircle, Truck, ArrowRight } from "lucide-react";
@@ -39,6 +46,9 @@ export default function OrderTracking() {
     progress: 0,
     updates: [],
   };
+
+  // State modal peta
+  const [mapOpen, setMapOpen] = useState(false);
 
   return (
     <DashboardLayout role="customer">
@@ -158,12 +168,40 @@ export default function OrderTracking() {
                   Detail Order
                 </Link>
               </Button>
-              <Button variant="hero" className="flex-1">
+
+              {/* Button Lihat di Peta dengan modal */}
+              <Button variant="hero" className="flex-1" onClick={() => setMapOpen(true)}>
                 <MapPin className="h-5 w-5 mr-2" />
                 Lihat di Peta
               </Button>
             </div>
           </div>
+
+          {/* Modal Peta */}
+          <Dialog open={mapOpen} onOpenChange={setMapOpen}>
+            <DialogContent className="sm:max-w-3xl w-full">
+              <DialogHeader>
+                <DialogTitle>Peta Perjalanan - {tracking.item}</DialogTitle>
+              </DialogHeader>
+
+              <div className="w-full h-[400px] mt-4">
+                {/* Google Maps Embed */}
+                <iframe
+  src="https://www.google.com/maps?q=-6.9025,107.6186&output=embed"
+  width="100%"
+  height="100%"
+  style={{ border: 0 }}
+  allowFullScreen
+  loading="lazy"
+  referrerPolicy="no-referrer-when-downgrade"
+/>
+              </div>
+
+              <div className="mt-4 flex justify-end">
+                <Button onClick={() => setMapOpen(false)}>Tutup</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
       </div>
     </DashboardLayout>
   );

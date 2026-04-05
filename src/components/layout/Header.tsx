@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Package, MapPin, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAppSettings } from "./AppSettingsContent";
 
 const navLinks = [
   { name: "Beranda", href: "/" },
@@ -13,6 +14,7 @@ const navLinks = [
 ];
 
 export function Header() {
+  const {appNameFirst, appNameLast} = useAppSettings();
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 
@@ -25,7 +27,7 @@ export function Header() {
             <Package className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="text-xl font-bold text-foreground">
-            Nitip<span className="text-primary">Go</span>
+            {appNameFirst}<span className="text-primary">{appNameLast}</span>
           </span>
         </Link>
 

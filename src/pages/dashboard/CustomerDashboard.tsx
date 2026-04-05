@@ -1,235 +1,558 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { 
-  Package, 
-  Plus, 
-  Clock, 
-  CheckCircle, 
-  MapPin,
-  ArrowRight,
-  ShoppingBag
-} from "lucide-react";
+import { motion, Variants } from "framer-motion";
+import { ArrowRight, MapPin, Package, Shield, Clock, Star, Users, TrendingUp, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { CountUp } from "@/components/ui/CountUp";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import heroImage from "@/assets/hero-illustration.png";
+import { useAppSettings } from "@/components/layout/AppSettingsContent";
 
-// Mock data
-const recentOrders = [
+// Mock data for available trips
+const availableTrips = [
   {
-    id: "ORD-001",
-    item: "Sepatu Nike Air Max",
+    id: 1,
+    traveler: "Andi Pratama",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=andi",
     from: "Jakarta",
     to: "Bandung",
-    status: "in_progress" as const,
-    traveler: "Andi Pratama",
     date: "15 Feb 2024",
+    capacity: "5 kg tersisa",
+    rating: 4.9,
+    trips: 127,
   },
   {
-    id: "ORD-002",
-    item: "Oleh-oleh Jogja",
-    from: "Yogyakarta",
-    to: "Jakarta",
-    status: "completed" as const,
+    id: 2,
     traveler: "Sari Dewi",
-    date: "10 Feb 2024",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sari",
+    from: "Surabaya",
+    to: "Malang",
+    date: "16 Feb 2024",
+    capacity: "3 kg tersisa",
+    rating: 4.8,
+    trips: 89,
   },
+  {
+    id: 3,
+    traveler: "Budi Santoso",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=budi",
+    from: "Yogyakarta",
+    to: "Semarang",
+    date: "17 Feb 2024",
+    capacity: "8 kg tersisa",
+    rating: 5.0,
+    trips: 203,
+  },
+];
+
+const features = [
+  {
+    icon: Shield,
+    title: "Aman & Terpercaya",
+    description: "Semua traveler terverifikasi dan transaksi dijamin aman dengan sistem escrow.",
+  },
+  {
+    icon: Clock,
+    title: "Cepat & Efisien",
+    description: "Barang dikirim langsung oleh traveler yang sedang bepergian ke tujuan Anda.",
+  },
+  {
+    icon: MapPin,
+    title: "Jangkauan Luas",
+    description: "Ribuan rute perjalanan tersedia dari dan ke berbagai kota di Indonesia.",
+  },
+];
+
+const howItWorksCustomer = [
+  { step: 1, title: "Pilih Layanan", desc: "Titip beli atau kirim barang" },
+  { step: 2, title: "Cari Traveler", desc: "Temukan traveler ke tujuan" },
+  { step: 3, title: "Konfirmasi Order", desc: "Bayar dan tunggu konfirmasi" },
+  { step: 4, title: "Terima Barang", desc: "Ambil di titik temu/mitra pos" },
+];
+
+const howItWorksTraveler = [
+  { step: 1, title: "Daftar Rute", desc: "Input jadwal perjalananmu" },
+  { step: 2, title: "Terima Order", desc: "Pilih order yang sesuai" },
+  { step: 3, title: "Bawa Barang", desc: "Antar barang sekalian jalan" },
+  { step: 4, title: "Dapat Penghasilan", desc: "Saldo masuk ke akunmu" },
 ];
 
 const stats = [
-  { label: "Total Order", value: 12, icon: Package, color: "text-primary", bgColor: "bg-primary/10" },
-  { label: "Dalam Proses", value: 2, icon: Clock, color: "text-warning", bgColor: "bg-warning/10" },
-  { label: "Selesai", value: 10, icon: CheckCircle, color: "text-success", bgColor: "bg-success/10" },
+  { value: 50, suffix: "K+", label: "Customer Puas" },
+  { value: 10, suffix: "K+", label: "Mitra Traveler" },
+  { value: 100, suffix: "+", label: "Kota Terjangkau" },
+  { value: 4.9, decimals: 1, label: "Rating Rata-rata" },
 ];
 
-const staggerContainer = {
+// Animation variants
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
-  show: {
+  visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
+      staggerChildren: 0.15,
+      delayChildren: 0.1,
     },
   },
 };
 
-const staggerItem = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 },
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: {
+    opacity: 1,
+    y: 0,
+  },
 };
 
 export default function CustomerDashboard() {
-  const { toast } = useToast();
-  const [showOrderModal, setShowOrderModal] = useState(false);
+  const { appNameFirst, appNameLast } = useAppSettings();
 
   return (
-    <DashboardLayout role="customer">
-      <div className="p-6 md:p-8 lg:p-10">
-        {/* Header */}
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-2xl font-bold text-foreground md:text-3xl">
-            Dashboard Customer
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Selamat datang kembali! Kelola pesanan Anda di sini.
-          </p>
-        </motion.div>
+    <CustomerLayout showFooter={true}>
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-hero">
+        {/* Background decoration */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-primary/5 blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-accent/5 blur-3xl" />
+        </div>
 
-        {/* Stats */}
-        <motion.div 
-          variants={staggerContainer}
-          initial="hidden"
-          animate="show"
-          className="grid gap-4 md:grid-cols-3 mb-8"
-        >
-          {stats.map((stat, i) => (
+        <div className="container relative py-16 md:py-24 lg:py-32">
+          <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
             <motion.div
-              key={i}
-              variants={staggerItem}
-              whileHover={{ y: -4, transition: { duration: 0.2 } }}
-              className="rounded-2xl bg-card p-6 shadow-card hover:shadow-card-hover transition-all"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="space-y-6"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="text-3xl font-bold text-foreground mt-1">
-                    <CountUp end={stat.value} duration={1500} />
-                  </p>
+              <motion.div variants={itemVariants}>
+                <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
+                  <Sparkles className="h-4 w-4" />
+                  <span>Sekalian Jalan, Nitip Barang!</span>
                 </div>
-                <motion.div 
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bgColor}`}
+              </motion.div>
+
+              <motion.h1
+                variants={itemVariants}
+                className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl"
+              >
+                Kirim Barang <span className="text-gradient-primary">Lebih Mudah</span> dengan Traveler
+              </motion.h1>
+
+              <motion.p
+                variants={itemVariants}
+                className="max-w-lg text-lg text-muted-foreground"
+              >
+                {appNameFirst}{appNameLast} mempertemukan Anda dengan traveler yang sedang bepergian ke kota tujuan.
+                Hemat biaya, cepat sampai, dan aman terpercaya.
+              </motion.p>
+
+              <motion.div
+                variants={itemVariants}
+                className="flex flex-wrap gap-4"
+              >
+                <Button
+                  variant="hero"
+                  size="lg"
+                  asChild
+                  className="group shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30"
                 >
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                  <Link to="/order/new">
+                    Mulai Sekarang
+                    <ArrowRight className="ml-1 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </Button>
+                <Button variant="outline" size="lg" asChild>
+                  <Link to="/cara-kerja">Pelajari Lebih Lanjut</Link>
+                </Button>
+              </motion.div>
+
+              {/* Stats */}
+              <motion.div
+                variants={itemVariants}
+                className="flex flex-wrap gap-6 pt-4"
+              >
+                {stats.map((stat, i) => (
+                  <div key={i} className="text-center">
+                    <p className="text-2xl font-bold text-primary">
+                      <CountUp
+                        end={stat.value}
+                        suffix={stat.suffix || ""}
+                        decimals={stat.decimals || 0}
+                        duration={2000}
+                      />
+                    </p>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  </div>
+                ))}
+              </motion.div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.7, delay: 0.3 }}
+              className="relative"
+            >
+              <motion.div
+                animate={{ y: [0, -15, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                className="relative overflow-hidden rounded-2xl shadow-2xl"
+              >
+                <img
+                  src={heroImage}
+                  alt="NitipGo - Traveler membawa paket"
+                  className="w-full h-auto"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent" />
+              </motion.div>
+
+              {/* Floating card - left */}
+              <motion.div
+                initial={{ opacity: 0, x: -40 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.8 }}
+                className="absolute -left-4 bottom-8 hidden md:block"
+              >
+                <motion.div
+                  animate={{ y: [0, -10, 0] }}
+                  transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                  className="rounded-xl bg-card p-4 shadow-card-hover backdrop-blur-sm border border-border/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/20">
+                      <Shield className="h-5 w-5 text-success" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">100% Aman</p>
+                      <p className="text-xs text-muted-foreground">Garansi uang kembali</p>
+                    </div>
+                  </div>
                 </motion.div>
+              </motion.div>
+
+              {/* Floating card - right */}
+              <motion.div
+                initial={{ opacity: 0, x: 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 1 }}
+                className="absolute -right-4 top-8 hidden md:block"
+              >
+                <motion.div
+                  animate={{ y: [0, -12, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                  className="rounded-xl bg-card p-4 shadow-card-hover backdrop-blur-sm border border-border/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/20">
+                      <TrendingUp className="h-5 w-5 text-accent" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Hemat 50%</p>
+                      <p className="text-xs text-muted-foreground">Dari ekspedisi biasa</p>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-16 md:py-24">
+        <div className="container">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl font-bold text-foreground md:text-4xl">
+              Kenapa Pilih <span className="text-primary">{appNameFirst}{appNameLast}</span>?
+            </h2>
+            <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
+              Platform jasa titip yang menghubungkan Anda dengan traveler terpercaya
+            </p>
+          </motion.div>
+
+          <div className="grid gap-6 md:grid-cols-3">
+            {features.map((feature, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.15 }}
+                whileHover={{ y: -8, transition: { duration: 0.2 } }}
+                className="group rounded-2xl bg-card p-6 shadow-card transition-shadow duration-300 hover:shadow-card-hover"
+              >
+                <motion.div
+                  className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 transition-colors duration-300 group-hover:bg-primary"
+                  whileHover={{ scale: 1.05 }}
+                >
+                  <feature.icon className="h-7 w-7 text-primary transition-colors duration-300 group-hover:text-primary-foreground" />
+                </motion.div>
+                <h3 className="mb-2 text-xl font-semibold text-foreground">{feature.title}</h3>
+                <p className="text-muted-foreground">{feature.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="bg-muted/50 py-16 md:py-24">
+        <div className="container">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl font-bold text-foreground md:text-4xl">
+              Cara Kerja <span className="text-primary">{appNameFirst}{appNameLast}</span>
+            </h2>
+          </motion.div>
+
+          <div className="grid gap-12 lg:grid-cols-2">
+            {/* Customer Flow */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="rounded-2xl bg-card p-6 shadow-card md:p-8"
+            >
+              <div className="mb-6 flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold">Sebagai Customer</h3>
+              </div>
+              <div className="space-y-4">
+                {howItWorksCustomer.map((item, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: i * 0.1 }}
+                    whileHover={{ x: 5, transition: { duration: 0.2 } }}
+                    className="flex items-start gap-4 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground"
+                    >
+                      {item.step}
+                    </motion.div>
+                    <div>
+                      <p className="font-semibold text-foreground">{item.title}</p>
+                      <p className="text-sm text-muted-foreground">{item.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
             </motion.div>
-          ))}
-        </motion.div>
 
-        {/* CTA - Buat Order - Centered */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="flex justify-center mb-8"
-        >
-          <Button variant="hero" size="lg" asChild className="shadow-lg shadow-accent/30">
-            <Link to="/order/new">
-              <Plus className="h-5 w-5 mr-2" />
-              Buat Order Baru
-            </Link>
-          </Button>
-        </motion.div>
-
-        {/* Quick Actions - Centered */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="grid gap-4 md:grid-cols-2 mb-8 max-w-3xl mx-auto"
-        >
-          <motion.div
-            whileHover={{ scale: 1.02, y: -4 }}
-            transition={{ duration: 0.2 }}
-            className="rounded-2xl bg-gradient-primary p-6 text-primary-foreground cursor-pointer"
-          >
-            <Link to="/order/new" className="block text-center">
-              <Package className="h-10 w-10 mb-4 mx-auto" />
-              <h3 className="text-xl font-semibold mb-2">Titip Beli Barang</h3>
-              <p className="text-primary-foreground/80 mb-4">
-                Minta traveler membelikan barang dari kota lain
-              </p>
-              <Button variant="white" className="group shadow-lg">
-                Mulai <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </Link>
-          </motion.div>
-
-          <motion.div
-            whileHover={{ scale: 1.02, y: -4 }}
-            transition={{ duration: 0.2 }}
-            className="rounded-2xl bg-gradient-to-br from-accent to-accent/80 p-6 text-accent-foreground cursor-pointer"
-          >
-            <Link to="/order/new" className="block text-center">
-              <MapPin className="h-10 w-10 mb-4 mx-auto" />
-              <h3 className="text-xl font-semibold mb-2">Kirim Barang</h3>
-              <p className="text-accent-foreground/80 mb-4">
-                Titipkan barang Anda ke traveler yang bepergian
-              </p>
-              <Button variant="white" className="group shadow-lg">
-                Mulai <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </Link>
-          </motion.div>
-        </motion.div>
-
-        {/* Recent Orders */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="rounded-2xl bg-card p-6 shadow-card"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-foreground">Order Terbaru</h2>
-            <Button variant="ghost" asChild>
-              <Link to="/history">Lihat Semua</Link>
-            </Button>
+            {/* Traveler Flow */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="rounded-2xl bg-card p-6 shadow-card md:p-8"
+            >
+              <div className="mb-6 flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/20">
+                  <MapPin className="h-6 w-6 text-accent" />
+                </div>
+                <h3 className="text-xl font-semibold">Sebagai Traveler</h3>
+              </div>
+              <div className="space-y-4">
+                {howItWorksTraveler.map((item, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: 20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: i * 0.1 }}
+                    whileHover={{ x: -5, transition: { duration: 0.2 } }}
+                    className="flex items-start gap-4 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground"
+                    >
+                      {item.step}
+                    </motion.div>
+                    <div>
+                      <p className="font-semibold text-foreground">{item.title}</p>
+                      <p className="text-sm text-muted-foreground">{item.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
           </div>
+        </div>
+      </section>
 
-          {recentOrders.length > 0 ? (
-            <div className="space-y-4">
-              {recentOrders.map((order, i) => (
-                <motion.div
-                  key={order.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 + i * 0.1 }}
-                  whileHover={{ x: 4, transition: { duration: 0.2 } }}
-                  className="flex flex-col md:flex-row md:items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium text-muted-foreground">{order.id}</span>
-                      <StatusBadge status={order.status} pulse={order.status === "in_progress"} size="sm" />
-                    </div>
-                    <p className="font-semibold text-foreground">{order.item}</p>
-                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                      <span>{order.from}</span>
-                      <ArrowRight className="h-3 w-3" />
-                      <span>{order.to}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Traveler</p>
-                      <p className="font-medium text-foreground">{order.traveler}</p>
-                    </div>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link to={`/order/${order.id}`}>Detail</Link>
-                    </Button>
-                  </div>
-                </motion.div>
-              ))}
+      {/* Available Trips Section */}
+      <section className="py-16 md:py-24">
+        <div className="container">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="flex flex-col md:flex-row md:items-end md:justify-between mb-8"
+          >
+            <div>
+              <h2 className="text-3xl font-bold text-foreground md:text-4xl">
+                Perjalanan <span className="text-primary">Tersedia</span>
+              </h2>
+              <p className="mt-2 text-muted-foreground">
+                Traveler siap membawa barang Anda
+              </p>
             </div>
-          ) : (
-            <EmptyState
-              icon={ShoppingBag}
-              title="Belum ada order"
-              description="Mulai buat order pertama Anda dan temukan traveler terpercaya"
-              actionLabel="Buat Order"
-              actionHref="/order/new"
-            />
-          )}
-        </motion.div>
-      </div>
-    </DashboardLayout>
+            <Button variant="outline" asChild className="mt-4 md:mt-0">
+              <Link to="/perjalanan">Lihat Semua</Link>
+            </Button>
+          </motion.div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {availableTrips.map((trip, i) => (
+              <motion.div
+                key={trip.id}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                whileHover={{ y: -8, transition: { duration: 0.25 } }}
+                className="group rounded-2xl bg-card p-5 shadow-card transition-shadow duration-300 hover:shadow-card-hover"
+              >
+                {/* Traveler Info */}
+                <div className="mb-4 flex items-center gap-3">
+                  <motion.img
+                    whileHover={{ scale: 1.1 }}
+                    src={trip.avatar}
+                    alt={trip.traveler}
+                    className="h-12 w-12 rounded-full bg-muted"
+                  />
+                  <div className="flex-1">
+                    <p className="font-semibold text-foreground">{trip.traveler}</p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Star className="h-4 w-4 fill-warning text-warning" />
+                      <span>{trip.rating}</span>
+                      <span>•</span>
+                      <span>{trip.trips} trip</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Route */}
+                <div className="mb-4 flex items-center gap-2 rounded-xl bg-muted/50 p-3">
+                  <div className="flex-1 text-center">
+                    <p className="text-xs text-muted-foreground">Dari</p>
+                    <p className="font-semibold text-foreground">{trip.from}</p>
+                  </div>
+                  <motion.div
+                    animate={{ x: [0, 5, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10"
+                  >
+                    <ArrowRight className="h-4 w-4 text-primary" />
+                  </motion.div>
+                  <div className="flex-1 text-center">
+                    <p className="text-xs text-muted-foreground">Ke</p>
+                    <p className="font-semibold text-foreground">{trip.to}</p>
+                  </div>
+                </div>
+
+                {/* Details */}
+                <div className="flex items-center justify-between text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Tanggal</p>
+                    <p className="font-medium text-foreground">{trip.date}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-muted-foreground">Kapasitas</p>
+                    <p className="font-medium text-success">{trip.capacity}</p>
+                  </div>
+                </div>
+
+                {/* Action */}
+                <Button variant="soft" className="mt-4 w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors" asChild>
+                  <Link to={`/perjalanan/${trip.id}`}>Lihat Detail</Link>
+                </Button>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-16 md:py-24">
+        <div className="container">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="overflow-hidden rounded-3xl bg-gradient-primary p-8 text-center md:p-12 lg:p-16 relative"
+          >
+            {/* Background decoration */}
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+              <div className="absolute -bottom-20 -left-20 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+            </div>
+
+            <div className="mx-auto max-w-2xl relative">
+              <motion.h2
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.2 }}
+                className="text-3xl font-bold text-primary-foreground md:text-4xl"
+              >
+                Siap Mulai Kirim Barang?
+              </motion.h2>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.3 }}
+                className="mt-4 text-primary-foreground/80"
+              >
+                Nikmati kemudahan jasa titip dengan {appNameFirst}{appNameLast}.
+                Gratis untuk customer, dapat penghasilan untuk traveler!
+              </motion.p>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.4 }}
+                className="mt-8 flex flex-wrap justify-center gap-4"
+              >
+                <Button
+                  variant="white"
+                  size="lg"
+                  asChild
+                  className="shadow-lg hover:shadow-xl"
+                >
+                  <Link to="/order/new" className="group">
+                    Buat Order Sekarang
+                    <ArrowRight className="ml-1 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </Button>
+                <Button variant="outline" size="lg" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" asChild>
+                  <Link to="/perjalanan">Cari Traveler</Link>
+                </Button>
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+    </CustomerLayout>
   );
 }

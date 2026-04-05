@@ -1,279 +1,620 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Wallet, CreditCard, Building2, CheckCircle, AlertCircle, TrendingUp } from "lucide-react";
+import {
+  Wallet,
+  CreditCard,
+  Building2,
+  CheckCircle,
+  AlertCircle,
+  TrendingUp,
+  PlusCircle,
+  History,
+  ArrowRight,
+  Plus,
+  Star,
+  Trash2,
+  ChevronRight,
+  ChevronLeft
+} from "lucide-react";
+import api from "@/lib/api";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { CountUp } from "@/components/ui/CountUp";
+import { Dialog, DialogContent, DialogDescription,DialogFooter, DialogHeader, DialogTitle,} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from "@/components/ui/select";
+// Provider logo
+import logoBni from "@/assets/providers/BNI.png";
+import logoDana from "@/assets/providers/Dana.png";
+import logoGopay from "@/assets/providers/Gopay.png";
+import logoMandiri from "@/assets/providers/Mandiri.png";
+import logoOvo from "@/assets/providers/OVO.png";
+import logoBca from "@/assets/providers/BCA.png";
 
 const withdrawMethods = [
   { id: "bank", name: "Transfer Bank", icon: Building2, fee: "Rp 2.500" },
   { id: "ewallet", name: "E-Wallet", icon: CreditCard, fee: "Gratis" },
 ];
 
+
+// Dummy account traveler
+interface PayoutAccount {
+  id: number;
+  payout_type: "bank" | "e_wallet";
+  provider: string;
+  account_name: string;
+  account_number: string;
+  is_default: boolean;
+}
+
+const providerLabels: Record<string, string> = {
+  bca: "BCA", bni: "BNI", mandiri: "Mandiri",
+  ovo: "OVO", dana: "DANA", gopay: "GoPay",
+};
+
+const bankProviders = ["bca", "bni", "mandiri"];
+const ewalletProviders = ["ovo", "dana", "gopay"];
+
 export default function TravelerWallet() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [selectedMethod, setSelectedMethod] = useState("");
-  const [amount, setAmount] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  type WithdrawStatus = "PENDING" | "APPROVED" | "REJECTED";
 
-  const balance = 2500000;
-  const numAmount = parseInt(amount) || 0;
+  const withdrawList = [
+  {
+    id: "WD-001",
+    amount: 500000,
+    method: "Transfer Bank",
+    status: "PENDING" as WithdrawStatus,
+    date: "18 Feb 2024",
+  },
+  {
+    id: "WD-002",
+    amount: 300000,
+    method: "E-Wallet",
+    status: "APPROVED" as WithdrawStatus,
+    date: "10 Feb 2024",
+  },
+];
+
+const providerLogos: Record<string, string> = {
+  bca: logoBca,
+  bni: logoBni,
+  mandiri: logoMandiri,
+  ovo: logoOvo,
+  dana: logoDana,
+  gopay: logoGopay,
+};
+
+const [selectedMethod, setSelectedMethod] = useState("");
+const [amount, setAmount] = useState("");
+const [accountNumber, setAccountNumber] = useState("");
+const [submitted, setSubmitted] = useState(false);
+const [withdrawRequests, setWithdrawRequests] = useState(withdrawList);
+
+const [showAddAccount, setShowAddAccount] = useState(false);
+const [deleteAccount, setDeleteAccount] = useState<PayoutAccount | null>(null);
+const [addForm, setAddForm] = useState({ payout_type: "bank" as "bank" | "e_wallet", provider: "", account_name: "", account_number: "" });
+
+
+ // ===== DUMMY DATA =====
+const totalIncome = 5200000;
+const totalWithdraw = 2700000;
+
+// balance sekarang dihitung otomatis
+const balance = totalIncome - totalWithdraw;
+
+const incomeList = [
+  { id: 1, title: "Order #1234", amount: 150000, date: "12 Feb 2024" },
+  { id: 2, title: "Order #1233", amount: 75000, date: "11 Feb 2024" },
+  { id: 3, title: "Order #1232", amount: 50000, date: "10 Feb 2024" },
+];
+// ======================
+
+  const numAmount = Number(amount) || 0;
   const isValidAmount = numAmount >= 50000 && numAmount <= balance;
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Withdrawal:", { method: selectedMethod, amount, accountNumber });
-    toast({
-      title: "Penarikan Diproses",
-      description: "Dana akan masuk ke rekening Anda dalam 1x24 jam.",
-    });
-    setSubmitted(true);
+  e.preventDefault();
+
+  const newWithdraw = {
+    id: `WD-${Date.now()}`,
+    amount: numAmount,
+    method:
+      selectedMethod === "bank" ? "Transfer Bank" : "E-Wallet",
+    status: "PENDING" as WithdrawStatus,
+    date: new Date().toLocaleDateString("id-ID"),
   };
+
+  setWithdrawRequests((prev) => [newWithdraw, ...prev]);
+
+  toast({
+    title: "Permintaan Penarikan Dikirim",
+    description: "Menunggu persetujuan admin.",
+  });
+
+  setSubmitted(true);
+  setAmount("");
+  setAccountNumber("");
+};
+
+// payout account
+const [accounts, setAccounts] = useState<PayoutAccount[]>([]);
+const [loadingAccounts, setLoadingAccounts] = useState(false);
+
+const [accountPage, setAccountPage] = useState(0);
+const accountsPerPage = 3;
+const totalAccountPages = Math.ceil(accounts.length / accountsPerPage);
+const pagedAccounts = accounts.slice(accountPage * accountsPerPage, (accountPage + 1) * accountsPerPage);
+
+const fetchAccounts = async () => {
+  setLoadingAccounts(true);
+  try {
+    const res = await api.get("/traveler/payout-accounts");
+    setAccounts(res.data.data ?? []);
+  } catch {
+    toast({ title: "Gagal memuat rekening", variant: "destructive" });
+  } finally {
+    setLoadingAccounts(false);
+  }
+};
+
+useEffect(() => {
+  fetchAccounts();
+}, []);
+
+// Payment account
+const handleAddAccount = async () => {
+  try {
+    await api.post("/traveler/payout-accounts", addForm);
+    toast({ title: "Rekening berhasil ditambahkan" });
+    setShowAddAccount(false);
+    setAddForm({ payout_type: "bank", provider: "", account_name: "", account_number: "" });
+    fetchAccounts();
+  } catch (err: any) {
+    toast({
+      title: err.response?.data?.message ?? "Gagal menambah rekening",
+      variant: "destructive",
+    });
+  }
+};
+
+const handleDeleteAccount = async () => {
+  if (!deleteAccount) return;
+  try {
+    await api.delete(`/traveler/payout-accounts/${deleteAccount.id}`);
+    toast({ title: "Rekening berhasil dihapus" });
+    fetchAccounts();
+  } catch (err: any) {
+    toast({
+      title: err.response?.data?.message ?? "Gagal menghapus rekening",
+      variant: "destructive",
+    });
+  } finally {
+    setDeleteAccount(null);
+  }
+};
+
+const handleSetDefault = async (id: number) => {
+  try {
+    await api.patch(`/traveler/payout-accounts/${id}/default`);
+    toast({ title: "Rekening utama berhasil diubah" });
+    fetchAccounts();
+  } catch {
+    toast({ title: "Gagal mengubah rekening utama", variant: "destructive" });
+  }
+};
 
   return (
     <DashboardLayout role="traveler">
       <div className="p-6 md:p-8 lg:p-10">
+        {/* HEADER */}
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-2xl font-bold text-foreground md:text-3xl">Saldo & Penarikan</h1>
-          <p className="text-muted-foreground mt-1">Kelola saldo dan tarik penghasilan Anda</p>
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-start gap-3">
+              <div className="mt-1 rounded-lg bg-primary/10 p-2">
+                <Wallet className="h-5 w-5 text-primary" />
+              </div>
+
+              <div>
+                <h1 className="text-2xl font-bold text-foreground md:text-3xl">
+                  Saldo Saya
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Kelola saldo dan riwayat transaksi Anda
+                </p>
+              </div>
+            </div>
+          </div>
         </motion.div>
 
-        <div className="max-w-xl mx-auto space-y-6">
-          {/* Balance Card */}
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* SALDO */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+            whileHover={{ scale: 1.02 }}
             className="rounded-2xl bg-gradient-to-br from-accent to-accent/80 p-6 text-accent-foreground relative overflow-hidden"
           >
-            {/* Background decoration */}
+
             <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
             <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-            
+
             <div className="relative">
-              <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-3 mb-3">
                 <Wallet className="h-8 w-8" />
                 <span className="text-lg font-medium">Saldo Anda</span>
               </div>
+
               <p className="text-4xl font-bold">
-                Rp <CountUp end={balance} duration={1500} />
+                Rp <CountUp end={balance} duration={1200} />
               </p>
-              <p className="text-accent-foreground/70 mt-2 flex items-center gap-1">
+
+              <p className="mt-2 text-sm flex items-center gap-1 text-accent-foreground/80">
                 <TrendingUp className="h-4 w-4" />
                 Tersedia untuk ditarik
               </p>
             </div>
           </motion.div>
 
-          {!submitted ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="rounded-2xl bg-card p-6 shadow-card"
+          {/* RINGKASAN */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="rounded-xl bg-card p-4 shadow-card hover:shadow-lg transition">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-success/10 text-success">
+                  <TrendingUp className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Pendapatan</p>
+                  <p className="font-semibold text-foreground">
+                    Rp {totalIncome.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+                        <div className="rounded-xl bg-card p-4 shadow-card hover:shadow-lg transition">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-warning/10 text-warning">
+                  <History className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Sudah Ditarik</p>
+                  <p className="font-semibold text-foreground">
+                    Rp {totalWithdraw.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+                        <div className="rounded-xl bg-card p-4 shadow-card hover:shadow-lg transition">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                  <Wallet className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Saldo Tersedia</p>
+                  <p className="font-semibold text-foreground">
+                    Rp {balance.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* BUTTON AKSI */}
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant="hero"
+              size="lg"
+              onClick={() => navigate("/traveler/tariksaldo")}
             >
-              <h2 className="text-xl font-semibold text-foreground mb-6">Tarik Saldo</h2>
-              <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Amount */}
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Jumlah Penarikan</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">Rp</span>
-                    <Input
-                      id="amount"
-                      type="number"
-                      min="50000"
-                      max={balance}
-                      step="10000"
-                      placeholder="100000"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className="pl-10 h-12"
-                      required
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Minimum Rp 50.000</p>
-                  {amount && !isValidAmount && (
-                    <p className="text-xs text-destructive flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {numAmount < 50000 ? "Minimum Rp 50.000" : "Melebihi saldo tersedia"}
+              <PlusCircle className="h-5 w-5 mr-2" />
+              Tarik Saldo
+            </Button>
+
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => navigate("/traveler/riwayatsaldo")}
+            >
+              <History className="h-5 w-5 mr-2" />
+              Lihat Riwayat
+            </Button>
+          </div>
+
+          {/* WRAPPER DESKTOP 2 KOLOM */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          {/* RIWAYAT PENARIKAN TERBARU */}
+          <div className="rounded-2xl bg-card p-6 shadow-card flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">
+                Penarikan Terakhir
+              </h2>
+              <button
+            className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition group"
+            onClick={() => navigate("/traveler/riwayatsaldo", { state: { filter: "withdraw" } })}
+          >
+            Lihat Semua
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </button>
+            </div>
+
+            <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
+              {withdrawRequests.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              Belum ada penarikan
+            </p>
+          )}
+              {withdrawRequests.slice(0, 3).map((wd) => (
+                <div
+                  key={wd.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/40 hover:bg-muted transition"
+                >
+                  <div>
+                    <p className="font-medium">
+                      Rp {wd.amount.toLocaleString()}
                     </p>
-                  )}
-                </div>
+                    <p className="text-xs text-muted-foreground">
+                      {wd.method} • {wd.date}
+                    </p>
+                  </div>
 
-                {/* Quick Amount */}
-                <div className="flex gap-2 flex-wrap">
-                  {[100000, 250000, 500000, 1000000].map((val) => (
-                    <motion.div key={val} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                      <Button
-                        type="button"
-                        variant={amount === val.toString() ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setAmount(val.toString())}
-                        disabled={val > balance}
-                      >
-                        Rp {(val / 1000)}rb
-                      </Button>
-                    </motion.div>
-                  ))}
-                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button
-                      type="button"
-                      variant={amount === balance.toString() ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setAmount(balance.toString())}
-                    >
-                      Semua
-                    </Button>
-                  </motion.div>
+                  <span
+            className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+              wd.status === "PENDING"
+                ? "bg-warning/15 text-warning"
+                : wd.status === "APPROVED"
+                ? "bg-success/15 text-success"
+                : "bg-destructive/15 text-destructive"
+            }`}
+          >
+            {wd.status}
+          </span>
                 </div>
+              ))}
+            </div>
+          </div>
 
-                {/* Method */}
-                <div className="space-y-3">
-                  <Label>Metode Penarikan</Label>
-                  {withdrawMethods.map((method) => (
-                    <motion.label
-                      key={method.id}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                      className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-colors ${
-                        selectedMethod === method.id
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/30"
+          {/* REKENING PEMBAYARAN */}
+          <div className="rounded-2xl bg-card p-6 shadow-card">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold">Rekening Pembayaran</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Rekening untuk menerima pembayaran dari customer
+                </p>
+              </div>
+              <Button size="sm" onClick={() => setShowAddAccount(true)}>
+                <Plus className="h-4 w-4 mr-1.5" />
+                Tambah
+              </Button>
+            </div>
+
+            {loadingAccounts ? (
+              <div className="py-8 text-center text-muted-foreground animate-pulse">Memuat rekening...</div>
+            ) : accounts.length === 0 ? (
+              <div className="py-8 text-center">
+                <CreditCard className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">Belum ada rekening</p>
+                <p className="text-xs text-muted-foreground mt-1">Tambahkan rekening agar customer bisa membayar</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {pagedAccounts.map((acc) => {
+                  const logo = providerLogos[acc.provider];
+                  return (
+                    <div
+                      key={acc.id}
+                      className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                        acc.is_default
+                          ? "border-primary/30 bg-primary/5"
+                          : "border-zinc-100 bg-zinc-50/50 hover:border-zinc-200"
                       }`}
                     >
-                      <input
-                        type="radio"
-                        name="method"
-                        value={method.id}
-                        checked={selectedMethod === method.id}
-                        onChange={(e) => setSelectedMethod(e.target.value)}
-                        className="sr-only"
-                      />
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                        <method.icon className="h-5 w-5 text-foreground" />
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white border border-zinc-100 overflow-hidden">
+                          {logo ? (
+                            <img src={logo} alt={acc.provider} className="h-7 w-7 object-contain" />
+                          ) : (
+                            <CreditCard className="h-5 w-5 text-zinc-400" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold">{providerLabels[acc.provider] ?? acc.provider.toUpperCase()}</p>
+                            {acc.is_default && (
+                              <span className="flex items-center gap-0.5 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                                <Star className="h-3 w-3" /> Utama
+                              </span>
+                            )}
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              acc.payout_type === "bank" ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600"
+                            }`}>
+                              {acc.payout_type === "bank" ? "Bank" : "E-Wallet"}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {acc.account_name} · {acc.account_number}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">{method.name}</p>
-                        <p className="text-sm text-muted-foreground">Biaya: {method.fee}</p>
-                      </div>
-                      <div className={`h-5 w-5 rounded-full border-2 transition-all ${selectedMethod === method.id ? "border-primary bg-primary" : "border-muted"}`}>
-                        {selectedMethod === method.id && (
-                          <CheckCircle className="h-full w-full text-primary-foreground" />
+                      <div className="flex items-center gap-1">
+                        {!acc.is_default && (
+                          <button onClick={() => handleSetDefault(acc.id)} title="Jadikan utama"
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-amber-50 hover:text-amber-600 transition">
+                            <Star className="h-4 w-4" />
+                          </button>
                         )}
+                        <button onClick={() => setDeleteAccount(acc)} title="Hapus"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600 transition">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
-                    </motion.label>
-                  ))}
-                </div>
-
-                {/* Account */}
-                {selectedMethod && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="space-y-2"
-                  >
-                    <Label htmlFor="accountNumber">
-                      {selectedMethod === "bank" ? "Nomor Rekening" : "Nomor E-Wallet"}
-                    </Label>
-                    <Input
-                      id="accountNumber"
-                      placeholder={selectedMethod === "bank" ? "1234567890" : "08xxxxxxxxxx"}
-                      value={accountNumber}
-                      onChange={(e) => setAccountNumber(e.target.value)}
-                      className="h-12"
-                      required
-                    />
-                  </motion.div>
-                )}
-
-                <Button
-                  type="submit"
-                  variant="hero"
-                  size="lg"
-                  className="w-full"
-                  disabled={!isValidAmount || !selectedMethod || !accountNumber}
-                >
-                  Tarik Rp {numAmount.toLocaleString()}
-                </Button>
-              </form>
-            </motion.div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="rounded-2xl bg-card p-8 shadow-card text-center"
-            >
-              <motion.div 
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", delay: 0.2 }}
-                className="flex h-20 w-20 items-center justify-center rounded-full bg-success/20 mx-auto mb-6"
-              >
-                <CheckCircle className="h-10 w-10 text-success" />
-              </motion.div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">
-                Penarikan Berhasil!
-              </h2>
-              <p className="text-muted-foreground mb-2">
-                Rp {numAmount.toLocaleString()} sedang diproses ke {selectedMethod === "bank" ? "rekening bank" : "e-wallet"} Anda.
-              </p>
-              <p className="text-sm text-muted-foreground mb-6">
-                Estimasi waktu: 1x24 jam kerja
-              </p>
-              <Button variant="hero" onClick={() => navigate("/traveler")}>
-                Kembali ke Dashboard
-              </Button>
-            </motion.div>
-          )}
-
-          {/* Transaction History */}
-          {!submitted && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="rounded-2xl bg-card p-6 shadow-card"
-            >
-              <h2 className="text-lg font-semibold text-foreground mb-4">Riwayat Penarikan</h2>
-              <div className="space-y-3">
-                {[
-                  { date: "10 Feb 2024", amount: 500000, status: "success" },
-                  { date: "25 Jan 2024", amount: 750000, status: "success" },
-                  { date: "15 Jan 2024", amount: 300000, status: "success" },
-                ].map((tx, i) => (
-                  <motion.div 
-                    key={i} 
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 + i * 0.1 }}
-                    whileHover={{ x: 4, transition: { duration: 0.2 } }}
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                  >
-                    <div>
-                      <p className="font-medium text-foreground">Rp {tx.amount.toLocaleString()}</p>
-                      <p className="text-sm text-muted-foreground">{tx.date}</p>
                     </div>
-                    <span className="px-2 py-1 rounded-full bg-success/20 text-success text-xs font-medium">
-                      Berhasil
+                  );
+                })}
+
+                {/* Pagination */}
+                {totalAccountPages > 1 && (
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      onClick={() => setAccountPage((p) => Math.max(0, p - 1))}
+                      disabled={accountPage === 0}
+                      className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Sebelumnya
+                    </button>
+                    <span className="text-xs text-muted-foreground">
+                      {accountPage + 1} / {totalAccountPages}
                     </span>
-                  </motion.div>
-                ))}
+                    <button
+                      onClick={() => setAccountPage((p) => Math.min(totalAccountPages - 1, p + 1))}
+                      disabled={accountPage === totalAccountPages - 1}
+                      className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition"
+                    >
+                      Selanjutnya
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
               </div>
-            </motion.div>
-          )}
+            )}
+          </div>
+
+          {/* PENDAPATAN TERBARU */}
+          <div className="rounded-2xl bg-card p-6 shadow-card flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-foreground">
+                Pendapatan Terbaru
+              </h2>
+              <button
+            className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition group"
+            onClick={() => navigate("/traveler/riwayatsaldo", { state: { filter: "income" } })}
+          >
+            Lihat Semua
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </button>
+            </div>
+
+            <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
+              {incomeList.map((item) => (
+                <motion.div
+                  key={item.id}
+                  whileHover={{ x: 2 }}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/40 hover:bg-muted transition"
+                >
+                  <div>
+                    <p className="font-medium text-foreground">
+                      + Rp {item.amount.toLocaleString()}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.title}
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {item.date}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
         </div>
       </div>
+
+      {/* DIALOG: TAMBAH REKENING */}
+      <Dialog open={showAddAccount} onOpenChange={setShowAddAccount}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                <CreditCard className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle>Tambah Rekening</DialogTitle>
+                <DialogDescription className="text-xs mt-0.5">Rekening bank atau e-wallet untuk menerima pembayaran</DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Tipe</Label>
+              <Select value={addForm.payout_type} onValueChange={(v: "bank" | "e_wallet") => setAddForm({ ...addForm, payout_type: v, provider: "" })}>
+                <SelectTrigger className="h-10 rounded-xl border-zinc-200"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bank">Transfer Bank</SelectItem>
+                  <SelectItem value="e_wallet">E-Wallet</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Provider</Label>
+              <Select value={addForm.provider} onValueChange={(v) => setAddForm({ ...addForm, provider: v })}>
+                <SelectTrigger className="h-10 rounded-xl border-zinc-200"><SelectValue placeholder="Pilih provider" /></SelectTrigger>
+                <SelectContent>
+                  {(addForm.payout_type === "bank" ? bankProviders : ewalletProviders).map((p) => (
+                    <SelectItem key={p} value={p}>{providerLabels[p]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Nama Pemilik</Label>
+              <Input placeholder="Nama sesuai rekening" value={addForm.account_name}
+                onChange={(e) => setAddForm({ ...addForm, account_name: e.target.value })}
+                className="h-10 rounded-xl border-zinc-200" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
+                {addForm.payout_type === "bank" ? "Nomor Rekening" : "Nomor HP / ID"}
+              </Label>
+              <Input placeholder={addForm.payout_type === "bank" ? "1234567890" : "08xxxxxxxxxx"}
+                value={addForm.account_number}
+                onChange={(e) => setAddForm({ ...addForm, account_number: e.target.value })}
+                className="h-10 rounded-xl border-zinc-200" />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowAddAccount(false)} className="flex-1">Batal</Button>
+            <Button onClick={handleAddAccount} disabled={!addForm.provider || !addForm.account_name || !addForm.account_number} className="flex-1">
+              Tambah Rekening
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG: HAPUS REKENING */}
+      <Dialog open={!!deleteAccount} onOpenChange={() => setDeleteAccount(null)}>
+        <DialogContent className="max-w-sm">
+          <div className="flex flex-col items-center text-center gap-4 py-2">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+              <Trash2 className="h-7 w-7 text-red-500" />
+            </div>
+            <div>
+              <h3 className="font-bold text-zinc-900 text-lg">Hapus Rekening?</h3>
+              <p className="text-sm text-zinc-500 mt-1">
+                <span className="font-semibold text-zinc-800">
+                  {providerLabels[deleteAccount?.provider ?? ""] ?? deleteAccount?.provider?.toUpperCase()} · {deleteAccount?.account_number}
+                </span> akan dihapus.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteAccount(null)} className="flex-1">Batal</Button>
+            <Button variant="destructive" onClick={handleDeleteAccount} className="flex-1">Ya, Hapus</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </DashboardLayout>
   );
 }

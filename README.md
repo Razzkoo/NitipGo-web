@@ -1,73 +1,165 @@
-# Welcome to your Lovable project
+# Nitipgo
 
-## Project info
+Platform jasa titip (jastip) berbasis web yang menghubungkan **customer** yang ingin mengirim barang dengan **traveler** yang sedang bepergian ke tujuan yang sama. Dibangun dengan React + TypeScript di sisi frontend dan Laravel di sisi backend.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+---
 
-## How can I edit this code?
+## Daftar Isi
 
-There are several ways of editing your application.
+- [Fitur Utama](#fitur-utama)
+- [Teknologi](#teknologi)
+- [Struktur Peran (Role)](#struktur-peran-role)
+- [Struktur Proyek](#struktur-proyek)
+- [Prasyarat](#prasyarat)
+- [Instalasi & Menjalankan Proyek](#instalasi--menjalankan-proyek)
+- [Variabel Environment](#variabel-environment)
+- [Skrip yang Tersedia](#skrip-yang-tersedia)
 
-**Use Lovable**
+---
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Fitur Utama
 
-Changes made via Lovable will be committed automatically to this repo.
+### Customer
+- Menelusuri daftar trip traveler yang tersedia
+- Membuat pesanan pengiriman barang
+- Melacak status pesanan secara real-time
+- Pembayaran & konfirmasi pesanan
+- Riwayat pesanan & trip
+- Live chat dengan traveler
+- Memberikan rating & ulasan
 
-**Use your preferred IDE**
+### Traveler
+- Mendaftarkan trip (rute, tanggal, kapasitas)
+- Mengelola pesanan masuk (terima / tolak / batalkan)
+- Dashboard pendapatan & dompet (withdraw)
+- Boost trip menggunakan fitur iklan
+- Riwayat trip & pesanan
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Admin
+- Manajemen pengguna (customer & traveler)
+- Manajemen transaksi & sengketa
+- Manajemen rute
+- Pengaturan booster & iklan
+- Manajemen rating
+- Dompet admin & laporan keuangan
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Umum
+- Autentikasi JWT (login, register, Google OAuth)
+- Peta interaktif berbasis Leaflet
+- Notifikasi real-time
+- Tampilan responsif (mobile-first)
+- Tema terang/gelap
 
-Follow these steps:
+---
+
+## Teknologi
+
+| Kategori | Teknologi |
+|---|---|
+| Framework UI | React 18, TypeScript |
+| Build Tool | Vite |
+| Styling | Tailwind CSS, shadcn/ui, Radix UI |
+| State & Data Fetching | TanStack Query (React Query) |
+| Routing | React Router DOM v6 |
+| Form | React Hook Form + Zod |
+| Peta | Leaflet + React Leaflet |
+| Animasi | Framer Motion |
+| HTTP Client | Axios |
+| Grafik | Recharts |
+| Notifikasi | Sonner, SweetAlert2 |
+| Testing | Vitest, Testing Library |
+| Backend | Laravel (API terpisah) |
+
+---
+
+## Struktur Peran (Role)
+
+```
+Pengguna
+├── Guest       — Halaman publik (beranda, daftar trip, FAQ, cara kerja)
+├── Customer    — Membuat & melacak pesanan
+├── Traveler    — Mendaftarkan trip & mengelola pesanan masuk
+└── Admin       — Manajemen platform secara keseluruhan
+```
+
+---
+
+## Struktur Proyek
+
+```
+src/
+├── assets/          # Gambar, ikon, provider assets
+├── components/
+│   ├── layout/      # Layout utama (Header, Footer, DashboardLayout, dll.)
+│   ├── map/         # Komponen peta Leaflet
+│   └── ui/          # Komponen UI reusable (shadcn/ui)
+├── context/         # React Context (OrderContext, dll.)
+├── lib/
+│   ├── api.ts       # Konfigurasi Axios + interceptor token
+│   ├── auth.ts      # Helper autentikasi
+│   └── storage.ts   # Helper localStorage
+├── pages/
+│   ├── admin/       # Halaman admin (users, transactions, routes, dll.)
+│   ├── auth/        # Login, Register, Google Callback
+│   ├── dashboard/   # Dashboard per peran
+│   ├── legal/       # Syarat & Ketentuan, Kebijakan Privasi
+│   ├── notifications/
+│   ├── order/       # Alur pemesanan (buat, detail, tracking, pembayaran)
+│   ├── profile/     # Profil per peran
+│   ├── settings/    # Pengaturan akun
+│   └── traveler/    # Halaman khusus traveler (trip, dompet, dll.)
+└── App.tsx          # Konfigurasi routing utama
+```
+
+---
+
+## Prasyarat
+
+- **Node.js** >= 18
+- **npm** >= 9
+- Backend Laravel berjalan di `http://localhost:8000` (atau sesuai `.env`)
+
+---
+
+## Instalasi & Menjalankan Proyek
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
+# 1. Clone repository
 git clone <YOUR_GIT_URL>
+cd web-nitipgo
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# 2. Install dependensi
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
+# 3. Salin file environment dan sesuaikan
+cp .env.example .env
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# 4. Jalankan development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Aplikasi akan berjalan di `http://localhost:5173` secara default.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+## Variabel Environment
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Buat file `.env` di root proyek:
 
-## What technologies are used for this project?
+```env
+VITE_API_URL=http://localhost:8000/api
+```
 
-This project is built with:
+---
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Skrip yang Tersedia
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+| Perintah | Keterangan |
+|---|---|
+| `npm run dev` | Menjalankan development server |
+| `npm run build` | Build produksi |
+| `npm run build:dev` | Build mode development |
+| `npm run preview` | Preview hasil build |
+| `npm run lint` | Menjalankan ESLint |
+| `npm run test` | Menjalankan unit test (Vitest) |
+| `npm run test:watch` | Menjalankan test dalam mode watch |

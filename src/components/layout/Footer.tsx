@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Package, MapPin, Phone, Mail, Instagram, Twitter, Facebook, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAppSettings } from "./AppSettingsContent";
 
 const footerLinks = {
   perusahaan: [
@@ -16,6 +17,8 @@ const footerLinks = {
 };
 
 export function Footer() {
+  const {appNameFirst, appNameLast} = useAppSettings();
+
   return (
     <footer className="border-t border-border/10 bg-footer">
       <div className="container py-12 md:py-16 text-footer">
@@ -27,7 +30,7 @@ export function Footer() {
                 <Package className="h-5 w-5 text-primary-foreground" />
               </div>
               <span className="text-xl font-bold text-white">
-                Nitip<span className="text-primary">Go</span>
+                {appNameFirst}<span className="text-primary">{appNameLast}</span>
               </span>
             </Link>
             <p className="text-sm text-white/70 max-w-xs">
@@ -78,7 +81,7 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-sm text-white/70">
                 <Mail className="h-4 w-4 text-primary" />
-                <span>hello@nitipgo.id</span>
+                <span>hello@{appNameFirst}{appNameLast}.id</span>
               </li>
               <li className="flex items-center gap-2 text-sm text-white/70">
                 <Phone className="h-4 w-4 text-primary" />
@@ -103,7 +106,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 md:flex-row">
           <p className="text-sm text-white/60">
-            © 2025 NitipGo. Hak Cipta Dilindungi.
+            © 2025 {appNameFirst}{appNameLast}. Hak Cipta Dilindungi.
           </p>
           <div className="flex gap-6">
             {footerLinks.legal.map((link) => (

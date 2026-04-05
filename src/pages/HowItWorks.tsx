@@ -3,6 +3,7 @@ import { Users, MapPin, Package, CreditCard, Search, CheckCircle, Star, Truck, A
 import { Link } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
+import { useAppSettings } from "@/components/layout/AppSettingsContent";
 
 const customerSteps = [
   {
@@ -61,6 +62,8 @@ const travelerSteps = [
 ];
 
 export default function HowItWorks() {
+  const {appNameFirst, appNameLast} = useAppSettings();
+
   return (
     <MainLayout>
       {/* Hero */}
@@ -72,7 +75,7 @@ export default function HowItWorks() {
             className="mx-auto max-w-2xl"
           >
             <h1 className="text-4xl font-bold text-foreground md:text-5xl">
-              Cara Kerja <span className="text-primary">NitipGo</span>
+              Cara Kerja <span className="text-primary">{appNameFirst}{appNameLast}</span>
             </h1>
             <p className="mt-4 text-lg text-muted-foreground">
               Proses mudah dan aman untuk customer maupun traveler. Pahami alurnya dan mulai gunakan layanan kami.

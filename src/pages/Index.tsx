@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { CountUp } from "@/components/ui/CountUp";
 import heroImage from "@/assets/hero-illustration.png";
+import { useAppSettings } from "@/components/layout/AppSettingsContent";
 
 // Mock data for available trips
 const availableTrips = [
@@ -103,6 +104,8 @@ const itemVariants: Variants = {
 };
 
 export default function Index() {
+  const {appNameFirst, appNameLast} = useAppSettings();
+
   return (
     <MainLayout>
       {/* Hero Section */}
@@ -139,7 +142,7 @@ export default function Index() {
                 variants={itemVariants}
                 className="max-w-lg text-lg text-muted-foreground"
               >
-                NitipGo mempertemukan Anda dengan traveler yang sedang bepergian ke kota tujuan. 
+                {appNameFirst}{appNameLast} mempertemukan Anda dengan traveler yang sedang bepergian ke kota tujuan. 
                 Hemat biaya, cepat sampai, dan aman terpercaya.
               </motion.p>
 
@@ -267,7 +270,7 @@ export default function Index() {
             className="text-center mb-12"
           >
             <h2 className="text-3xl font-bold text-foreground md:text-4xl">
-              Kenapa Pilih <span className="text-primary">NitipGo</span>?
+              Kenapa Pilih <span className="text-primary">{appNameFirst}{appNameLast}</span>?
             </h2>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
               Platform jasa titip yang menghubungkan Anda dengan traveler terpercaya
@@ -309,7 +312,7 @@ export default function Index() {
             className="text-center mb-12"
           >
             <h2 className="text-3xl font-bold text-foreground md:text-4xl">
-              Cara Kerja <span className="text-primary">NitipGo</span>
+              Cara Kerja <span className="text-primary">{appNameFirst}{appNameLast}</span>
             </h2>
           </motion.div>
 
@@ -523,7 +526,7 @@ export default function Index() {
                 transition={{ delay: 0.3 }}
                 className="mt-4 text-primary-foreground/80"
               >
-                Daftar sekarang dan nikmati kemudahan jasa titip dengan NitipGo. 
+                Daftar sekarang dan nikmati kemudahan jasa titip dengan {appNameFirst}{appNameLast}. 
                 Gratis untuk customer, dapat penghasilan untuk traveler!
               </motion.p>
               <motion.div 

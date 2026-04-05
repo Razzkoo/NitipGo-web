@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
 import { motion } from "framer-motion";
 import { 
   MapPin, 
@@ -10,7 +12,8 @@ import {
   Star,
   ArrowRight,
   CheckCircle,
-  Clock
+  Clock,
+  LayoutDashboard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -19,27 +22,15 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AnimatedProgress } from "@/components/ui/AnimatedProgress";
 
-// Mock data
-const upcomingTrips = [
-  {
-    id: 1,
-    from: "Jakarta",
-    to: "Bandung",
-    date: "20 Feb 2024",
-    orders: 3,
-    capacity: "5 kg tersisa",
-    capacityPercent: 50,
-  },
-  {
-    id: 2,
-    from: "Jakarta",
-    to: "Surabaya",
-    date: "25 Feb 2024",
-    orders: 1,
-    capacity: "8 kg tersisa",
-    capacityPercent: 20,
-  },
-];
+type Trip = {
+  id: number;
+  from: string;
+  to: string;
+  date: string;
+  orders: number;
+  capacity: string;
+  capacityPercent: number;
+};
 
 const pendingOrders = [
   {
@@ -93,6 +84,20 @@ function formatCurrency(value: number): string {
 }
 
 export default function TravelerDashboard() {
+  const [upcomingTrips, setUpcomingTrips] = useState<Trip[]>([]);
+  const [loadingTrips, setLoadingTrips] = useState(true);
+
+  useEffect(() => {
+    api.get("/traveler/trips")
+      .then(res => {
+    
+        setUpcomingTrips((res.data.trips ?? []).slice(0, 2));
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoadingTrips(false));
+  }, []);
+
+
   return (
     <DashboardLayout role="traveler">
       <div className="p-6 md:p-8 lg:p-10">
@@ -100,23 +105,20 @@ export default function TravelerDashboard() {
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row md:items-center md:justify-between mb-8"
-        >
-          <div>
-            <h1 className="text-2xl font-bold text-foreground md:text-3xl">
-              Dashboard Traveler
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Kelola perjalanan dan order Anda di sini.
-            </p>
-          </div>
-          <div className="flex items-center gap-3 mt-4 md:mt-0">
-            <Button className="bg-gradient-to-r from-accent to-accent/90 text-accent-foreground shadow-lg shadow-accent/20" asChild>
-              <Link to="/traveler/trip/new">
-                <Plus className="h-5 w-5 mr-1" />
-                Tambah Perjalanan
-              </Link>
-            </Button>
+          className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+          <div className="flex items-start gap-3">
+            <div className="mt-1 rounded-lg bg-primary/10 p-2">
+              <LayoutDashboard className="h-5 w-5 text-primary" />
+            </div>
+
+            <div>
+              <h1 className="text-2xl font-bold text-foreground md:text-3xl">
+                Dashboard Traveler
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Kelola perjalanan dan order Anda di sini.
+              </p>
+            </div>
           </div>
         </motion.div>
 
@@ -173,11 +175,13 @@ export default function TravelerDashboard() {
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-foreground">Perjalanan Mendatang</h2>
               <Button variant="ghost" asChild>
-                <Link to="/traveler/trips">Semua</Link>
+                <Link to="/traveler/trip">Semua</Link>
               </Button>
             </div>
 
-            {upcomingTrips.length > 0 ? (
+            {loadingTrips ? (
+                  <p className="text-sm text-muted-foreground">Loading trips...</p>
+                ) : upcomingTrips.length > 0 ? (
               <div className="space-y-4">
                 {upcomingTrips.map((trip, i) => (
                   <motion.div
