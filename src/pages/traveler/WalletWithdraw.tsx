@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Wallet, Landmark, Smartphone,
   Info, ArrowRight, CheckCircle2, Clock,
   Shield, AlertCircle, Eye, EyeOff,
-  Banknote, X, Check, TrendingUp, Zap,
+  Banknote, X, Check, TrendingUp, Zap, CreditCard
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -12,10 +12,23 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import api from "@/lib/api";
+import logoBni from "@/assets/providers/BNI.png";
+import logoDana from "@/assets/providers/Dana.png";
+import logoGopay from "@/assets/providers/Gopay.png";
+import logoMandiri from "@/assets/providers/Mandiri.png";
+import logoOvo from "@/assets/providers/OVO.png";
+import logoBca from "@/assets/providers/BCA.png";
+
+
+const providerLogos: Record<string, string> = {
+  bca: logoBca, bni: logoBni, mandiri: logoMandiri,
+  ovo: logoOvo, dana: logoDana, gopay: logoGopay,
+};
 
 type MethodId = "bank" | "ewallet";
 
-const QUICK_AMOUNTS = [50_000, 100_000, 250_000, 500_000, 1_000_000, 2_000_000];
+const QUICK_AMOUNTS = [10_000, 50_000, 100_000, 250_000, 500_000, 1_000_000];
 const BANKS    = ["BCA", "BNI", "BRI", "Mandiri", "BSI", "CIMB Niaga", "Danamon"];
 const EWALLETS = ["Dana", "OVO", "GoPay", "ShopeePay", "LinkAja"];
 
@@ -56,8 +69,6 @@ export default function TarikSaldo() {
   const navigate  = useNavigate();
   const { toast } = useToast();
 
-  const saldo = 5_200_000 - 2_700_000; // mirror wallet page
-
   const [method,       setMethod]       = useState<MethodId | null>(null);
   const [account,      setAccount]      = useState("");
   const [selectedBank, setSelectedBank] = useState("");
@@ -67,24 +78,51 @@ export default function TarikSaldo() {
   const [step,         setStep]         = useState<"form" | "confirm" | "success">("form");
   const [processing,   setProcessing]   = useState(false);
 
+  // wallet balance
+  const [saldo, setSaldo] = useState(0);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const selectedAccount = accounts.find(a => a.id.toString() === selectedBank);
+
   const numericAmount  = Number(amount.replace(/\D/g, "")) || 0;
   const fee            = method === "bank" ? 2_500 : 0;
   const receivedAmount = numericAmount - fee;
-  const isValidAmount  = numericAmount >= 50_000 && numericAmount <= saldo;
-  const isFormValid    = !!(method && account && selectedBank && isValidAmount && pin.length === 6);
+  const isValidAmount = numericAmount >= 10_000 && numericAmount <= saldo;
+  const isFormValid = !!(method && selectedBank && isValidAmount && pin.length === 6);
+
+  useEffect(() => {
+    Promise.all([
+      api.get("/traveler/wallet"),
+      api.get("/traveler/payout-accounts"),
+    ]).then(([walletRes, accountsRes]) => {
+      setSaldo(walletRes.data.data?.balance ?? 0);
+      setAccounts(accountsRes.data.data ?? []);
+    }).catch(() => {}).finally(() => setLoadingData(false));
+  }, []);
 
   const formatAmount = (val: string) => {
     const num = val.replace(/\D/g, "");
     setAmount(num ? Number(num).toLocaleString("id-ID") : "");
   };
   const handleSelectMethod = (m: MethodId) => { setMethod(m); setAccount(""); setSelectedBank(""); };
+
+  // Handle submit
   const handleSubmit = async () => {
     setProcessing(true);
-    await new Promise(r => setTimeout(r, 1600));
-    setProcessing(false);
-    setStep("success");
-    toast({ title: "Permintaan Terkirim", description: "Menunggu persetujuan admin." });
+    try {
+      await api.post("/traveler/wallet/withdraw", {
+        payout_account_id: Number(selectedBank),
+        amount: numericAmount,
+      });
+      setStep("success");
+      toast({ title: "Penarikan Berhasil", description: "Dana akan segera masuk ke rekening tujuan." });
+    } catch (err: any) {
+      toast({ title: err?.response?.data?.message ?? "Gagal membuat penarikan", variant: "destructive" });
+    } finally {
+      setProcessing(false);
+    }
   };
+
   const resetForm = () => { setMethod(null); setAccount(""); setSelectedBank(""); setAmount(""); setPin(""); setStep("form"); };
 
   return (
@@ -114,8 +152,8 @@ export default function TarikSaldo() {
                     <CheckCircle2 className="h-12 w-12 text-emerald-500" />
                   </motion.div>
                   <motion.div {...fadeUp(0.2)}>
-                    <h2 className="text-2xl font-bold text-gray-900">Permintaan Terkirim!</h2>
-                    <p className="text-gray-400 mt-1">Menunggu persetujuan admin — maks. 1×24 jam</p>
+                    <h2 className="text-2xl font-bold text-gray-900">Penarikan berhasil!</h2>
+                    <p className="text-gray-400 mt-1">Dana akan segera masuk ke rekening tujuan</p>
                   </motion.div>
                   <motion.div {...fadeUp(0.3)} className="bg-gray-50 rounded-2xl border border-gray-100 p-5 space-y-3 text-left">
                     <SummaryRow label="Jumlah Tarik" value={"Rp " + numericAmount.toLocaleString("id-ID")} />
@@ -123,7 +161,7 @@ export default function TarikSaldo() {
                     <div className="border-t border-gray-100 pt-3">
                       <SummaryRow label="Dana Diterima" value={"Rp " + receivedAmount.toLocaleString("id-ID")} accent="text-emerald-600" large />
                     </div>
-                    <SummaryRow label="Tujuan" value={selectedBank + " — " + account} />
+                    <SummaryRow label="Tujuan" value={selectedAccount ? `${selectedAccount.provider.toUpperCase()} — ${selectedAccount.account_number}` : "—"} />
                   </motion.div>
                   <motion.div {...fadeUp(0.4)} className="flex gap-3">
                     <Button variant="outline" className="flex-1 rounded-xl h-12 border-gray-200 font-semibold" onClick={() => navigate(-1)}>Ke Dompet</Button>
@@ -163,8 +201,8 @@ export default function TarikSaldo() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {([
-                      { id: "bank" as MethodId, label: "Rekening Bank", sub: "BCA, BNI, BRI, dll", icon: Landmark, feeLabel: "Biaya Rp 2.500", feeColor: "text-amber-600 bg-amber-50" },
-                      { id: "ewallet" as MethodId, label: "E-Wallet", sub: "Dana, OVO, GoPay", icon: Smartphone, feeLabel: "Gratis", feeColor: "text-emerald-600 bg-emerald-50" },
+                      { id: "bank" as MethodId, label: "Rekening Bank", sub: "BCA, BNI, Mandiri", icon: Landmark, feeLabel: "Biaya Rp 2.500", feeColor: "text-amber-600 bg-amber-50" },
+                      { id: "ewallet" as MethodId, label: "E-Wallet", sub: "Dana, OVO, GoPay", icon: CreditCard, feeLabel: "Gratis", feeColor: "text-emerald-600 bg-emerald-50" },
                     ]).map(({ id, label, sub, icon: Icon, feeLabel, feeColor }) => {
                       const active = method === id;
                       return (
@@ -188,23 +226,54 @@ export default function TarikSaldo() {
                   </div>
                 </motion.div>
 
-                {/* Step 2 */}
+                {/* Step 2 — pilih rekening */}
                 <AnimatePresence>
                   {method && (
                     <motion.div key="account" {...fadeUp(0)} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
                       <div className="flex items-center gap-2.5">
                         <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0">2</span>
-                        <h2 className="font-bold text-gray-900">Detail Rekening</h2>
+                        <h2 className="font-bold text-gray-900">Pilih Rekening</h2>
                       </div>
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{method === "bank" ? "Pilih Bank" : "Pilih E-Wallet"}</p>
-                        <div className="flex flex-wrap gap-2">
-                          {(method === "bank" ? BANKS : EWALLETS).map(b => <Chip key={b} active={selectedBank === b} onClick={() => setSelectedBank(b)}>{b}</Chip>)}
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{method === "bank" ? "Nomor Rekening" : "Nomor HP / Akun"}</p>
-                        <Input className="h-12 rounded-xl border-gray-200 bg-gray-50 text-sm font-medium" placeholder={method === "bank" ? "Contoh: 1234567890" : "08xxxxxxxxxx"} value={account} onChange={e => setAccount(e.target.value)} />
+                        {accounts
+                          .filter(a => method === "bank" ? a.payout_type === "bank" : a.payout_type === "e_wallet")
+                          .map(acc => {
+                            const active = selectedBank === acc.id.toString();
+                            const logo = providerLogos[acc.provider];
+                            return (
+                              <button key={acc.id}
+                                onClick={() => { setSelectedBank(acc.id.toString()); setAccount(acc.account_number); }}
+                                className={cn("w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all",
+                                  active ? "border-primary bg-primary/5" : "border-gray-100 hover:border-gray-200")}>
+                                
+                                {/* Logo provider */}
+                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white border border-gray-100 overflow-hidden shrink-0">
+                                  {logo ? (
+                                    <img src={logo} alt={acc.provider} className="h-7 w-7 object-contain" />
+                                  ) : (
+                                    <CreditCard className="h-5 w-5 text-gray-400" />
+                                  )}
+                                </div>
+
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-sm font-semibold">{acc.provider.toUpperCase()}</p>
+                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                                      acc.payout_type === "bank" ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600"
+                                    }`}>
+                                      {acc.payout_type === "bank" ? "Bank" : "E-Wallet"}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-400">{acc.account_name} • {acc.account_number}</p>
+                                </div>
+
+                                {active && <Check className="h-4 w-4 text-primary shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        {accounts.filter(a => method === "bank" ? a.payout_type === "bank" : a.payout_type === "e_wallet").length === 0 && (
+                          <p className="text-xs text-gray-400 text-center py-4">Belum ada rekening {method === "bank" ? "bank" : "e-wallet"}</p>
+                        )}
                       </div>
                     </motion.div>
                   )}
@@ -242,12 +311,12 @@ export default function TarikSaldo() {
                       <AnimatePresence>
                         {amount && !isValidAmount && (
                           <motion.p {...fadeUp(0)} className="text-xs text-rose-500 flex items-center gap-1.5">
-                            <AlertCircle className="h-3.5 w-3.5" />{numericAmount < 50_000 ? "Minimal penarikan Rp 50.000" : "Melebihi saldo tersedia"}
+                            <AlertCircle className="h-3.5 w-3.5" />{numericAmount < 50_000 ? "Minimal penarikan Rp 10.000" : "Melebihi saldo tersedia"}
                           </motion.p>
                         )}
                       </AnimatePresence>
                       <div className="flex items-center gap-2.5 bg-blue-50 border border-blue-100 rounded-xl p-3.5 text-xs text-blue-600">
-                        <Info className="h-4 w-4 shrink-0" /><span>Minimal Rp 50.000 · Diproses maksimal 1×24 jam kerja</span>
+                        <Info className="h-4 w-4 shrink-0" /><span>Minimal Rp 10.000 · Diproses maksimal 1×24 jam kerja</span>
                       </div>
                     </motion.div>
                   )}
@@ -282,7 +351,7 @@ export default function TarikSaldo() {
                 <motion.div {...fadeUp(0.12)} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                   <div className="bg-gray-50 border-b border-gray-100 px-6 py-4"><h2 className="font-bold text-gray-900">Ringkasan</h2></div>
                   <div className="p-6 space-y-4">
-                    {[["Metode", method === "bank" ? "Transfer Bank" : method === "ewallet" ? "E-Wallet" : null], ["Tujuan", selectedBank || null], ["No. Akun", account || null]].map(([label, value]) => (
+                    {[["Metode", method === "bank" ? "Transfer Bank" : method === "ewallet" ? "E-Wallet" : null], ["Tujuan", selectedAccount ? selectedAccount.provider.toUpperCase() : null], ["No. Akun", selectedAccount ? `${selectedAccount.account_name} • ${selectedAccount.account_number}` : null]].map(([label, value]) => (
                       <div key={label as string} className="flex justify-between">
                         <span className="text-sm text-gray-400">{label}</span>
                         <span className={cn("text-sm font-semibold", value ? "text-gray-700" : "text-gray-200")}>{value ?? "—"}</span>
@@ -328,10 +397,8 @@ export default function TarikSaldo() {
                     <h3 className="text-sm font-bold text-gray-700">Info Penarikan</h3>
                   </div>
                   <ul className="space-y-2 text-xs text-gray-400 leading-relaxed">
-                    <li>Minimal penarikan <span className="font-semibold text-gray-600">Rp 50.000</span></li>
+                    <li>Minimal penarikan <span className="font-semibold text-gray-600">Rp 10.000</span></li>
                     <li>Biaya admin bank <span className="font-semibold text-gray-600">Rp 2.500</span>, e-wallet <span className="font-semibold text-gray-600">gratis</span></li>
-                    <li>Diproses maksimal <span className="font-semibold text-gray-600">1×24 jam kerja</span></li>
-                    <li>Dana masuk setelah disetujui admin</li>
                   </ul>
                 </motion.div>
               </div>
@@ -354,8 +421,8 @@ export default function TarikSaldo() {
                   <div className="divide-y divide-gray-50">
                     {[
                       ["Metode", method === "bank" ? "Transfer Bank" : "E-Wallet"],
-                      ["Tujuan", selectedBank],
-                      ["Nomor Akun", account],
+                      ["Tujuan", selectedAccount ? selectedAccount.provider.toUpperCase() : null],
+                      ["No. Akun", selectedAccount ? `${selectedAccount.account_name} • ${selectedAccount.account_number}` : null],
                       ["Jumlah Tarik", "Rp " + numericAmount.toLocaleString("id-ID")],
                       ["Biaya Admin", fee > 0 ? "Rp " + fee.toLocaleString("id-ID") : "Gratis"],
                       ["Dana Diterima", "Rp " + receivedAmount.toLocaleString("id-ID")],

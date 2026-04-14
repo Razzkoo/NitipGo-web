@@ -63,22 +63,6 @@ export default function TravelerWallet() {
   const { toast } = useToast();
   type WithdrawStatus = "PENDING" | "APPROVED" | "REJECTED";
 
-  const withdrawList = [
-  {
-    id: "WD-001",
-    amount: 500000,
-    method: "Transfer Bank",
-    status: "PENDING" as WithdrawStatus,
-    date: "18 Feb 2024",
-  },
-  {
-    id: "WD-002",
-    amount: 300000,
-    method: "E-Wallet",
-    status: "APPROVED" as WithdrawStatus,
-    date: "10 Feb 2024",
-  },
-];
 
 const providerLogos: Record<string, string> = {
   bca: logoBca,
@@ -93,53 +77,37 @@ const [selectedMethod, setSelectedMethod] = useState("");
 const [amount, setAmount] = useState("");
 const [accountNumber, setAccountNumber] = useState("");
 const [submitted, setSubmitted] = useState(false);
-const [withdrawRequests, setWithdrawRequests] = useState(withdrawList);
+const [withdrawRequests, setWithdrawRequests] = useState<any[]>([]);
 
 const [showAddAccount, setShowAddAccount] = useState(false);
 const [deleteAccount, setDeleteAccount] = useState<PayoutAccount | null>(null);
 const [addForm, setAddForm] = useState({ payout_type: "bank" as "bank" | "e_wallet", provider: "", account_name: "", account_number: "" });
+const [walletData, setWalletData] = useState({ balance: 0, totalIncome: 0, totalWithdraw: 0 });
+const [incomeList, setIncomeList] = useState<any[]>([]);
+const { balance, totalIncome, totalWithdraw } = walletData;
 
+useEffect(() => {
+  api.get("/traveler/wallet").then(res => {
+    setWalletData(res.data.data ?? { balance: 0, totalIncome: 0, totalWithdraw: 0 });
+  }).catch(() => {});
+}, []);
 
- // ===== DUMMY DATA =====
-const totalIncome = 5200000;
-const totalWithdraw = 2700000;
+useEffect(() => {
+  api.get("/traveler/wallet/income").then(res => {
+    setIncomeList(res.data.data ?? []);
+  }).catch(() => {});
+}, []);
 
-// balance sekarang dihitung otomatis
-const balance = totalIncome - totalWithdraw;
+useEffect(() => {
+  api.get("/traveler/wallet/withdraws").then(res => {
+    const raw = res.data.data?.data ?? res.data.data ?? [];
+    setWithdrawRequests(Array.isArray(raw) ? raw : []);
+  }).catch(() => {});
+}, []);
 
-const incomeList = [
-  { id: 1, title: "Order #1234", amount: 150000, date: "12 Feb 2024" },
-  { id: 2, title: "Order #1233", amount: 75000, date: "11 Feb 2024" },
-  { id: 3, title: "Order #1232", amount: 50000, date: "10 Feb 2024" },
-];
 // ======================
 
-  const numAmount = Number(amount) || 0;
-  const isValidAmount = numAmount >= 50000 && numAmount <= balance;
-
-  const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
-
-  const newWithdraw = {
-    id: `WD-${Date.now()}`,
-    amount: numAmount,
-    method:
-      selectedMethod === "bank" ? "Transfer Bank" : "E-Wallet",
-    status: "PENDING" as WithdrawStatus,
-    date: new Date().toLocaleDateString("id-ID"),
-  };
-
-  setWithdrawRequests((prev) => [newWithdraw, ...prev]);
-
-  toast({
-    title: "Permintaan Penarikan Dikirim",
-    description: "Menunggu persetujuan admin.",
-  });
-
-  setSubmitted(true);
-  setAmount("");
-  setAccountNumber("");
-};
+const numAmount = Number(amount) || 0;
 
 // payout account
 const [accounts, setAccounts] = useState<PayoutAccount[]>([]);
@@ -253,9 +221,9 @@ const handleSetDefault = async (id: number) => {
                 <span className="text-lg font-medium">Saldo Anda</span>
               </div>
 
-              <p className="text-4xl font-bold">
-                Rp <CountUp end={balance} duration={1200} />
-              </p>
+             <p className="text-4xl font-bold">
+              Rp {balance.toLocaleString("id-ID")}
+            </p>
 
               <p className="mt-2 text-sm flex items-center gap-1 text-accent-foreground/80">
                 <TrendingUp className="h-4 w-4" />
@@ -353,31 +321,21 @@ const handleSetDefault = async (id: number) => {
               Belum ada penarikan
             </p>
           )}
-              {withdrawRequests.slice(0, 3).map((wd) => (
-                <div
-                  key={wd.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/40 hover:bg-muted transition"
-                >
+              {withdrawRequests.slice(0, 3).map((wd: any) => (
+                <div key={wd.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/40 hover:bg-muted transition">
                   <div>
-                    <p className="font-medium">
-                      Rp {wd.amount.toLocaleString()}
-                    </p>
+                    <p className="font-medium">Rp {Number(wd.amount).toLocaleString("id-ID")}</p>
                     <p className="text-xs text-muted-foreground">
-                      {wd.method} • {wd.date}
+                      {wd.payout_account?.provider?.toUpperCase() ?? "—"} • {new Date(wd.created_at).toLocaleDateString("id-ID")}
                     </p>
                   </div>
-
-                  <span
-            className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-              wd.status === "PENDING"
-                ? "bg-warning/15 text-warning"
-                : wd.status === "APPROVED"
-                ? "bg-success/15 text-success"
-                : "bg-destructive/15 text-destructive"
-            }`}
-          >
-            {wd.status}
-          </span>
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                    wd.withdraw_status === "pending" ? "bg-warning/15 text-warning" :
+                    ["approved", "paid"].includes(wd.withdraw_status) ? "bg-success/15 text-success" :
+                    "bg-destructive/15 text-destructive"
+                  }`}>
+                    {wd.withdraw_status?.toUpperCase()}
+                  </span>
                 </div>
               ))}
             </div>

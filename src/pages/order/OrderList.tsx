@@ -26,19 +26,27 @@ interface Order {
   order_type: string;
   weight: string;
   price: string;
+  price_confirmed?: boolean;
   status: string;
   created_at: string;
   customer: { id: number; name: string; phone: string; profile_photo: string | null } | null;
   trip: { id: number; city: string; destination: string } | null;
   pickup_point: { name: string; address: string } | null;
+  payment: { id: number; payment_status: string; paid_at: string | null } | null;
 }
 
-const tabs = [
-  { key: "pending",      label: "Menunggu",          icon: Clock,      color: "text-amber-500",   bg: "bg-amber-50",   activeBg: "bg-amber-500" },
-  { key: "on_progress",  label: "Diproses",          icon: Loader2,    color: "text-violet-500",  bg: "bg-violet-50",  activeBg: "bg-violet-500" },
-  { key: "on_the_way",   label: "Dalam Perjalanan",  icon: Truck,      color: "text-sky-500",     bg: "bg-sky-50",     activeBg: "bg-sky-500" },
-  { key: "finished",     label: "Selesai",           icon: CheckCheck, color: "text-emerald-500", bg: "bg-emerald-50", activeBg: "bg-emerald-500" },
-  { key: "cancelled",    label: "Dibatalkan",        icon: Ban,        color: "text-rose-500",    bg: "bg-rose-50",    activeBg: "bg-rose-500" },
+const statusTabs = [
+  { key: "all",        label: "Semua" },
+  { key: "pending",    label: "Menunggu" },
+  { key: "active",     label: "Aktif" },
+  { key: "finished",   label: "Selesai" },
+  { key: "cancelled",  label: "Dibatalkan" },
+] as const;
+
+const typeTabs = [
+  { key: "all",        label: "Semua Jenis" },
+  { key: "titip-beli", label: "Titip Beli" },
+  { key: "kirim",      label: "Kirim Barang" },
 ] as const;
 
 function getAvatar(photo: string | null, name: string) {
@@ -50,11 +58,10 @@ export default function TravelerOrders() {
   const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("pending");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
 
-  const [actionDialog, setActionDialog] = useState<{
-    open: boolean; action: "accept" | "reject"; order: Order | null;
-  }>({ open: false, action: "accept", order: null });
+  const [actionDialog, setActionDialog] = useState<{ open: boolean; action: "accept" | "reject"; order: Order | null; }>({ open: false, action: "accept", order: null });
   const [rejectReason, setRejectReason] = useState("");
   const [processing, setProcessing] = useState(false);
 
@@ -73,7 +80,14 @@ export default function TravelerOrders() {
 
   useEffect(() => { fetchOrders(); }, []);
 
-  const filteredOrders = orders.filter(o => o.status === activeTab);
+  const filteredOrders = orders.filter(o => {
+    if (statusFilter === "pending" && o.status !== "pending") return false;
+    if (statusFilter === "active" && !["on_progress", "on_the_way"].includes(o.status)) return false;
+    if (statusFilter === "finished" && o.status !== "finished") return false;
+    if (statusFilter === "cancelled" && o.status !== "cancelled") return false;
+    if (typeFilter !== "all" && o.order_type !== typeFilter) return false;
+    return true;
+  });
 
   const handleAccept = async () => {
     if (!actionDialog.order) return;
@@ -131,31 +145,53 @@ export default function TravelerOrders() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 flex-wrap">
-          {tabs.map(({ key, label, icon: Icon, color, bg, activeBg }) => {
-            const count = orders.filter(o => o.status === key).length;
-            const isActive = activeTab === key;
-            return (
-              <button
-                key={key}
-                onClick={() => setActiveTab(key)}
-                className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
-                  isActive
-                    ? `${activeBg} text-white border-transparent shadow-md`
-                    : "bg-white text-gray-500 border-gray-100 hover:border-gray-200"
-                }`}
-              >
-                <Icon className={`h-3.5 w-3.5 ${isActive ? "text-white" : color}`} />
-                <span>{label}</span>
-                <span className={`ml-0.5 min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold flex items-center justify-center ${
-                  isActive ? "bg-white/20 text-white" : `${bg} ${color}`
-                }`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+        {/* Filters */}
+        <div className="space-y-3 mb-6">
+          <div className="flex gap-2 flex-wrap">
+            {statusTabs.map(({ key, label }) => {
+              const isActive = statusFilter === key;
+              const count = key === "all" ? orders.length
+                : key === "pending" ? orders.filter(o => o.status === "pending").length
+                : key === "active" ? orders.filter(o => ["on_progress", "on_the_way"].includes(o.status)).length
+                : orders.filter(o => o.status === key).length;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setStatusFilter(key)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${
+                    isActive
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                      : "bg-white text-gray-500 border-gray-100 hover:border-gray-200"
+                  }`}
+                >
+                  {label}
+                  <span className={`min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold flex items-center justify-center ${
+                    isActive ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {typeTabs.map(({ key, label }) => {
+              const isActive = typeFilter === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setTypeFilter(key)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                    isActive
+                      ? "bg-emerald-500 text-white border-emerald-500"
+                      : "bg-white text-gray-500 border-gray-100 hover:border-emerald-300"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Content */}
@@ -188,6 +224,13 @@ export default function TravelerOrders() {
                       </div>
                     </div>
                     <StatusBadge status={order.status as any} size="sm" />
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                        order.order_type === "titip-beli"
+                          ? "bg-amber-50 text-amber-700"
+                          : "bg-blue-50 text-blue-700"
+                      }`}>
+                        {order.order_type === "titip-beli" ? "Titip Beli" : "Kirim"}
+                      </span>
                   </div>
 
                   <h3 className="text-base font-bold text-gray-900 mb-2">{order.name}</h3>
@@ -225,10 +268,31 @@ export default function TravelerOrders() {
                       </>
                     )}
                     {order.status === "on_progress" && (
-                      <Button size="sm" className="gap-1.5 bg-sky-500 hover:bg-sky-600 text-white text-xs h-8 rounded-lg"
-                        onClick={() => handleUpdateStatus(order.id, "on_the_way")}>
-                        <Truck className="h-3.5 w-3.5" /> Mulai Kirim
-                      </Button>
+                      <>
+                        {order.order_type === "titip-beli" && !order.price_confirmed ? (
+                          <Button
+                            size="sm"
+                            className="gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs h-8 rounded-lg"
+                            asChild
+                          >
+                            <Link to={`/traveler/order/${order.id}`}>
+                              Atur Harga
+                            </Link>
+                          </Button>
+                        ) : !(order as any).payment || (order as any).payment?.payment_status !== "paid" ? (
+                          <span className="text-[10px] text-sky-600 bg-sky-50 border border-sky-200 px-2 py-1 rounded-lg">
+                            Menunggu Pembayaran
+                          </span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            className="gap-1.5 bg-sky-500 hover:bg-sky-600 text-white text-xs h-8 rounded-lg"
+                            onClick={() => handleUpdateStatus(order.id, "on_the_way")}
+                          >
+                            <Truck className="h-3.5 w-3.5" /> Mulai Kirim
+                          </Button>
+                        )}
+                      </>
                     )}
                     {order.status === "on_the_way" && (
                       <Button size="sm" className="gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs h-8 rounded-lg"

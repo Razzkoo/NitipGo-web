@@ -161,6 +161,10 @@ export default function NewOrder() {
 
     // Step 1 validation
     if (step === 1) {
+      if (!formData.photo) {
+        showError("Foto barang wajib diupload");
+        return;
+      }
       if (!formData.itemName.trim()) {
         showError("Nama barang wajib diisi");
         return;
@@ -353,7 +357,7 @@ export default function NewOrder() {
                     <div className="space-y-5">
                       {/* Foto */}
                       <div className="space-y-2">
-                        <Label>Foto Barang (Opsional)</Label>
+                        <Label>Foto Barang *</Label>
                         <label
                           htmlFor="uploadPhoto"
                           className="relative h-36 border-2 border-dashed border-border rounded-xl p-4 text-center hover:border-primary/50 transition-colors cursor-pointer block"
@@ -363,6 +367,7 @@ export default function NewOrder() {
                             accept="image/*"
                             className="hidden"
                             id="uploadPhoto"
+                            required
                             onChange={(e) =>
                               setFormData({ ...formData, photo: e.target.files?.[0] || null })
                             }
@@ -371,6 +376,9 @@ export default function NewOrder() {
                             <Upload className="h-7 w-7 mb-2 text-muted-foreground" />
                             <p className="text-sm text-muted-foreground">
                               {formData.photo ? formData.photo.name : "Klik untuk upload foto"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Wajib upload foto agar traveler dapat memahami barang Anda dengan jelas
                             </p>
                           </div>
                         </label>

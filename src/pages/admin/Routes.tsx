@@ -26,13 +26,27 @@ const staggerItem = {
 export default function AdminRoutes() {
   const [routes, setRoutes] = useState<RouteData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
+  const [stats, setStats] = useState({
+    total_routes: 0, total_trips: 0, active_trips: 0, total_travelers: 0
+  });
 
   useEffect(() => {
     api.get("/admin/routes")
-      .then(res => setRoutes(res.data.data ?? []))
+      .then(res => {
+        setRoutes(res.data.data ?? []);
+        if (res.data.stats) setStats(res.data.stats);
+      })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => setLoading(false)); 
   }, []);
+
+  // Filter route
+  const filteredRoutes = routes.filter(r => {
+    if (filter === "active") return r.active_trips > 0;
+    if (filter === "inactive") return r.active_trips === 0;
+    return true;
+  });
 
   const totalTravelers = routes.reduce((sum, r) => sum + r.travelers, 0);
   const totalTrips = routes.reduce((sum, r) => sum + r.total_trips, 0);
@@ -71,9 +85,9 @@ export default function AdminRoutes() {
           className="grid gap-3 md:grid-cols-3 mb-6"
         >
           {[
-            { label: "Total Rute", value: routes.length, icon: <Route className="h-4 w-4" />, suffix: "rute" },
-            { label: "Total Perjalanan", value: totalTrips, icon: <Package className="h-4 w-4" />, suffix: `trip (${activeTrips} aktif)` },
-            { label: "Total Traveler", value: totalTravelers, icon: <Users className="h-4 w-4" />, suffix: "orang" },
+            { label: "Total Rute", value: stats.total_routes, icon: <Route className="h-4 w-4" />, suffix: "rute" },
+            { label: "Total Perjalanan", value: stats.total_trips, icon: <Package className="h-4 w-4" />, suffix: `trip (${activeTrips} aktif)` },
+            { label: "Total Traveler", value: stats.total_travelers, icon: <Users className="h-4 w-4" />, suffix: "orang" },
           ].map((stat, i) => (
             <motion.div
               key={i}
@@ -89,13 +103,34 @@ export default function AdminRoutes() {
               </div>
               <div className="flex items-end gap-2">
                 <p className="text-3xl font-semibold tracking-tight text-foreground leading-none">
-                  <CountUp end={stat.value} duration={1000} />
+                  <CountUp key={stat.value} end={stat.value} duration={1000} />
                 </p>
                 <span className="text-xs text-muted-foreground mb-0.5 leading-none">{stat.suffix}</span>
               </div>
             </motion.div>
           ))}
         </motion.div>
+        
+              {/* Filter Tabs */}
+              <div className="flex gap-2 mb-4">
+                {[
+                  { key: "all",      label: "Semua Rute" },
+                  { key: "active",   label: "Aktif" },
+                  { key: "inactive", label: "Tidak Aktif" },
+                ].map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setFilter(key as any)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${
+                      filter === key
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                        : "bg-card text-muted-foreground border-border hover:border-primary/30"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
 
         {/* Loading */}
         {loading ? (
@@ -119,6 +154,7 @@ export default function AdminRoutes() {
               transition={{ delay: 0.2 }}
               className="hidden md:block rounded-2xl bg-card shadow-card overflow-hidden"
             >
+
               <table className="w-full">
                 <thead className="bg-muted/50">
                   <tr>
@@ -130,7 +166,7 @@ export default function AdminRoutes() {
                   </tr>
                 </thead>
                 <motion.tbody variants={staggerContainer} initial="hidden" animate="show">
-                  {routes.map((route, i) => (
+                  {filteredRoutes.map((route, i) => (
                     <motion.tr
                       key={`${route.fromCity}-${route.toCity}`}
                       variants={staggerItem}
@@ -166,7 +202,7 @@ export default function AdminRoutes() {
 
             {/* Mobile Cards */}
             <div className="md:hidden space-y-3">
-              {routes.map((route) => (
+              {filteredRoutes.map((route) => (
                 <div
                   key={`${route.fromCity}-${route.toCity}`}
                   className="rounded-xl border border-border bg-card p-4"

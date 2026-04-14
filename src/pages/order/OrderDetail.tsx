@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import {
   ArrowLeft, ArrowRight, Package, MapPin, Calendar, Clock,
   Phone, Mail, User, CheckCircle, Loader2, ExternalLink,
-  Star, Send, RefreshCw, XCircle,
+  Star, Send, RefreshCw, XCircle, AlertTriangle
 } from "lucide-react";
 import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import { Button } from "@/components/ui/button";
@@ -16,14 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import logoBni from "@/assets/providers/BNI.png";
-import logoDana from "@/assets/providers/Dana.png";
-import logoGopay from "@/assets/providers/Gopay.png";
-import logoMandiri from "@/assets/providers/Mandiri.png";
-import logoOvo from "@/assets/providers/OVO.png";
-import logoBca from "@/assets/providers/BCA.png";
 
 const BASE_URL = (api.defaults.baseURL ?? "http://localhost:8000/api").replace("/api", "");
 
@@ -56,15 +48,6 @@ const statusLabel: Record<string, string> = {
 };
 
 // Provider logo
-const providerLogos: Record<string, string> = {
-  bca: logoBca, bni: logoBni, mandiri: logoMandiri,
-  ovo: logoOvo, dana: logoDana, gopay: logoGopay,
-};
-
-const providerLabels: Record<string, string> = {
-  bca: "BCA", bni: "BNI", mandiri: "Mandiri",
-  ovo: "OVO", dana: "DANA", gopay: "GoPay",
-};
 
 export default function CustomerOrderDetail() {
   const { id } = useParams();
@@ -82,9 +65,28 @@ export default function CustomerOrderDetail() {
   const [uploading, setUploading] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
 
+  // Rating 
+  const [ratingDialog, setRatingDialog] = useState(false);
+  const [ratingValue, setRatingValue] = useState(0);
+  const [ratingHover, setRatingHover] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [submittingRating, setSubmittingRating] = useState(false);
+  const [report, setReport] = useState<any>(null);
+  const fetchReport = async () => {
+    try {
+      const res = await api.get(`/customer/orders/${id}/report/answer`);
+      if (res.data.data) setReport(res.data.data);
+    } catch {}
+  };
 
-  useEffect(() => {
-    if (id) fetchOrder();
+  // Payment by midtrans
+  const [paying, setPaying] = useState(false);
+
+  useEffect(() => {   
+    if (id) {
+      fetchOrder();
+      fetchReport();
+    }
   }, [id]);
 
   const fetchOrder = async () => {
@@ -131,6 +133,70 @@ export default function CustomerOrderDetail() {
       toast({ title: err?.response?.data?.message ?? "Gagal upload", variant: "destructive" });
     } finally {
       setUploading(false);
+    }
+  };
+
+  // Handle payment by midtrans
+  const handlePay = async () => {
+    setPaying(true);
+    try {
+      const res = await api.post(`/customer/orders/${id}/pay`);
+      const { snap_token, snap_url, client_key } = res.data.data;
+
+      const existingScript = document.querySelector('script[src*="snap"]');
+      if (existingScript) existingScript.remove();
+
+      const script = document.createElement("script");
+      script.src = snap_url;
+      script.setAttribute("data-client-key", client_key);
+      script.onload = () => {
+        (window as any).snap.pay(snap_token, {
+          onSuccess: async () => {
+            // Sync status ke backend
+            await api.post(`/customer/orders/${id}/payment-sync`);
+            toast({ title: "Pembayaran berhasil!" });
+            fetchOrder();
+          },
+          onPending: () => {
+            toast({ title: "Menunggu pembayaran..." });
+            fetchOrder();
+          },
+          onError: () => {
+            toast({ title: "Pembayaran gagal", variant: "destructive" });
+          },
+          onClose: async () => {
+            // Sync close popup
+            try {
+              await api.post(`/customer/orders/${id}/payment-sync`);
+            } catch {}
+            fetchOrder();
+          },
+        });
+      };
+      document.head.appendChild(script);
+    } catch (err: any) {
+      toast({ title: err?.response?.data?.message ?? "Gagal memproses pembayaran", variant: "destructive" });
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  // Rating traveler
+  const handleSubmitRating = async () => {
+    if (!ratingValue) return;
+    setSubmittingRating(true);
+    try {
+      await api.post(`/customer/orders/${id}/rating`, {
+        rating: ratingValue,
+        review: reviewText,
+      });
+      toast({ title: "Rating berhasil dikirim!" });
+      setRatingDialog(false);
+      fetchOrder(); // refresh agar tombol rating hilang
+    } catch (err: any) {
+      toast({ title: err?.response?.data?.message ?? "Gagal mengirim rating", variant: "destructive" });
+    } finally {
+      setSubmittingRating(false);
     }
   };
 
@@ -365,108 +431,86 @@ export default function CustomerOrderDetail() {
             </div>
           </motion.div>
 
-          {order.order_type === "titip-beli" && order.status === "on_progress" && order.price_confirmed && !order.paid_at && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl bg-amber-50 border-2 border-amber-300 p-5 space-y-4">
-              <div>
-                <h3 className="font-bold text-amber-800 text-lg">Pembayaran Diperlukan</h3>
-                <p className="text-sm text-amber-700 mt-1">
-                  Traveler sudah mengkonfirmasi harga barang. Silakan transfer dan upload bukti pembayaran.
-                </p>
-              </div>
+          {/* Pembayaran Midtrans */}
+          {order.status === "on_progress" && (
+            <>
+              {/* BELUM ADA HARGA FINAL */}
+              {order.order_type === "titip-beli" && !order.price_confirmed ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-2xl bg-gray-100 border border-gray-300 p-5"
+                >
+                  <h3 className="font-bold text-gray-700 text-lg">
+                    Menunggu Harga dari Traveler
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Traveler sedang menghitung total harga barang Anda. Pembayaran akan tersedia setelah harga final ditentukan.
+                  </p>
+                </motion.div>
+              ) : (
+                /* SUDAH ADA HARGA */
+                (!order.payment || order.payment.payment_status !== "paid") && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-2xl bg-amber-50 border-2 border-amber-300 p-5 space-y-4"
+                  >
+                    <div>
+                      <h3 className="font-bold text-amber-800 text-lg">Pembayaran Diperlukan</h3>
+                      <p className="text-sm text-amber-700 mt-1">
+                        Traveler sudah menetapkan harga. Silakan lakukan pembayaran untuk melanjutkan.
+                      </p>
+                    </div>
 
-              {/* Struk dari traveler */}
-              {order.order_process?.receipt_photo && (
-                <div>
-                  <p className="text-xs font-semibold text-amber-800 mb-1">Struk Belanja dari Traveler</p>
-                  <img
-                    src={`${BASE_URL}/storage/${order.order_process.receipt_photo}`}
-                    alt="Struk"
-                    className="w-full h-40 rounded-lg object-cover border cursor-pointer hover:opacity-90"
-                    onClick={() => setReceiptOpen(true)}
-                  />
-                  {order.order_process.price_notes && (
-                    <p className="text-xs text-amber-600 mt-1">Catatan: {order.order_process.price_notes}</p>
-                  )}
-                </div>
-              )}
-
-              {/* Total */}
-              <div className="rounded-lg bg-white p-3 border">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Biaya Pengiriman</span>
-                  <span>{formatRupiah(order.shipping_price)}</span>
-                </div>
-                <div className="flex justify-between text-sm mt-1">
-                  <span className="text-muted-foreground">Harga Barang (final)</span>
-                  <span>{formatRupiah(Number(order.item_price) * order.quantity)}</span>
-                </div>
-                <div className="border-t my-2" />
-                <div className="flex justify-between">
-                  <span className="font-semibold">Total Bayar</span>
-                  <span className="text-lg font-bold text-primary">{formatRupiah(order.price)}</span>
-                </div>
-              </div>
-
-              {/* Rekening Traveler */}
-              {order.traveler?.payout_accounts && order.traveler.payout_accounts.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-amber-800">Transfer ke Rekening Traveler</p>
-                  {order.traveler.payout_accounts.map((acc: any) => {
-                    const logo = providerLogos[acc.provider];
-                    return (
-                      <div key={acc.id} className="flex items-center gap-3 p-3 rounded-xl bg-white border">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-50 border border-zinc-100 overflow-hidden shrink-0">
-                          {logo ? (
-                            <img src={logo} alt={acc.provider} className="h-7 w-7 object-contain" />
-                          ) : (
-                            <span className="text-xs font-bold text-zinc-400">{(acc.provider ?? "").toUpperCase().slice(0, 3)}</span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-semibold">{providerLabels[acc.provider] ?? (acc.provider ?? "").toUpperCase()}</p>
-                            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                              acc.payout_type === "bank" ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600"
-                            }`}>
-                              {acc.payout_type === "bank" ? "Bank" : "E-Wallet"}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">{acc.account_name}</p>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-sm font-mono font-bold">{acc.account_number}</p>
-                        </div>
+                    <div className="rounded-lg bg-white p-3 border">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Biaya Pengiriman</span>
+                        <span>{formatRupiah(order.shipping_price)}</span>
                       </div>
-                    );
-                  })}
-                </div>
+
+                      {order.order_type === "titip-beli" && order.item_price && (
+                        <div className="flex justify-between text-sm mt-1">
+                          <span className="text-muted-foreground">Harga Barang</span>
+                          <span>{formatRupiah(Number(order.item_price) * order.quantity)}</span>
+                        </div>
+                      )}
+
+                      <div className="border-t my-2" />
+
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Total Bayar</span>
+                        <span className="text-lg font-bold text-primary">
+                          {formatRupiah(order.price)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Button
+                      className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+                      disabled={paying}
+                      onClick={handlePay}
+                    >
+                      {paying ? "Memproses..." : "Bayar Sekarang"}
+                    </Button>
+                  </motion.div>
+                )
               )}
+            </>
+          )}
 
-              {/* Upload Bukti */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-amber-800">Upload Bukti Transfer *</Label>
-                <label className="flex items-center gap-3 p-3 rounded-lg border-2 border-dashed border-amber-300 bg-white cursor-pointer hover:border-amber-400 transition">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => setPaymentFile(e.target.files?.[0] || null)}
-                  />
-                  <Package className="h-5 w-5 text-amber-500" />
-                  <span className="text-sm text-amber-700">
-                    {paymentFile ? paymentFile.name : "Klik untuk upload bukti transfer"}
-                  </span>
-                </label>
+          {order.payment?.payment_status === "paid" && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              className="rounded-xl bg-emerald-50 border border-emerald-200 p-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-emerald-600" />
+                <div>
+                  <p className="text-sm text-emerald-700 font-medium">Pembayaran berhasil</p>
+                  <p className="text-xs text-emerald-600 mt-0.5">
+                    via {order.payment.payment_type ?? "Midtrans"} • {formatDate(order.payment.paid_at)}
+                  </p>
+                </div>
               </div>
-
-              <Button
-                className="w-full bg-amber-600 hover:bg-amber-700 text-white"
-                disabled={uploading || !paymentFile}
-                onClick={handleUploadPayment}
-              >
-                {uploading ? "Mengupload..." : "Upload Bukti Pembayaran"}
-              </Button>
             </motion.div>
           )}
 
@@ -503,7 +547,67 @@ export default function CustomerOrderDetail() {
                 </Link>
               </Button>
             )}
+
+            {/* Button Rating */}
+            {order.status === "finished" && !order.rating && (
+              <Button
+                variant="outline"
+                className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                onClick={() => setRatingDialog(true)}
+              >
+                <Star className="h-4 w-4 mr-1.5 fill-amber-400 text-amber-400" />
+                Beri Rating
+              </Button>
+            )}
+            {order.status === "finished" && order.rating && (
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200">
+                {[1,2,3,4,5].map(s => (
+                  <Star key={s} className={`h-4 w-4 ${s <= order.rating.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
+                ))}
+                <span className="text-xs text-amber-700 ml-1 font-medium">Sudah dirating</span>
+              </div>
+            )}
           </motion.div>
+
+          {/* Laporan yang Kamu Kirim */}
+          {report && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl bg-card p-5 shadow-card space-y-3">
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                Laporan yang Kamu Kirim
+              </h3>
+
+              <div className="rounded-xl bg-muted/40 border border-border/50 px-4 py-3">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">
+                  {report.code} · {report.dispute_status === "resolved" ? "Diselesaikan" : report.dispute_status === "under_review" ? "Ditinjau" : "Menunggu Jawaban"}
+                </p>
+                <p className="text-sm font-semibold text-foreground mb-1">{report.title}</p>
+                {report.description && (
+                  <p className="text-xs text-muted-foreground leading-relaxed">{report.description}</p>
+                )}
+              </div>
+
+              {report.traveler_note ? (
+                <div className="rounded-xl bg-primary/5 border border-primary/20 px-4 py-3">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <User className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <p className="text-xs font-semibold text-primary">Jawaban dari Traveler</p>
+                  </div>
+                  <p className="text-sm text-foreground/80 leading-relaxed">{report.traveler_note}</p>
+                  {report.resolved_at && (
+                    <p className="text-[11px] text-muted-foreground mt-1.5">
+                      Diselesaikan: {new Date(report.resolved_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+                  <p className="text-xs text-amber-700">Traveler belum memberikan jawaban. Mohon tunggu.</p>
+                </div>
+              )}
+            </motion.div>
+          )}
         </div>
 
         {/* Cancel Dialog */}
@@ -538,6 +642,72 @@ export default function CustomerOrderDetail() {
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Rating Dialog */}
+        <Dialog open={ratingDialog} onOpenChange={setRatingDialog}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Beri Rating Traveler</DialogTitle>
+              <DialogDescription>
+                Bagaimana pengalaman Anda dengan {order.traveler?.name}?
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              {/* Star selector */}
+              <div className="flex justify-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setRatingValue(star)}
+                    onMouseEnter={() => setRatingHover(star)}
+                    onMouseLeave={() => setRatingHover(0)}
+                    className="transition-transform hover:scale-110"
+                  >
+                    <Star
+                      className={`h-9 w-9 transition-colors ${
+                        star <= (ratingHover || ratingValue)
+                          ? "fill-amber-400 text-amber-400"
+                          : "text-muted-foreground"
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+              {ratingValue > 0 && (
+                <p className="text-center text-sm text-muted-foreground">
+                  {["", "Sangat Buruk", "Buruk", "Cukup", "Baik", "Sangat Baik"][ratingValue]}
+                </p>
+              )}
+
+              {/* Review textarea */}
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Ulasan (opsional)</label>
+                <textarea
+                  className="w-full rounded-xl border p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  rows={3}
+                  placeholder="Ceritakan pengalaman Anda..."
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setRatingDialog(false)}>
+                Batal
+              </Button>
+              <Button
+                className="flex-1"
+                disabled={!ratingValue || submittingRating}
+                onClick={handleSubmitRating}
+              >
+                {submittingRating ? "Mengirim..." : "Kirim Rating"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </CustomerLayout>
   );

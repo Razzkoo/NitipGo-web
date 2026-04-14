@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Star, AlertCircle, Crown, Flag,
@@ -10,23 +10,23 @@ import { CountUp } from "@/components/ui/CountUp";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import api from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Review = {
-  id: string; traveler: string; travelerRoute: string; customer: string;
-  rating: number; review: string; date: string; orderId: string;
-  category: string; flagged?: boolean;
+  id: string;
+  traveler: string;
+  travelerRoute: string;
+  customer: string;
+  rating: number;
+  review: string;
+  date: string;
+  orderId: string;
+  category?: string;
+  flagged?: boolean;
 };
 
-const mockReviews: Review[] = [
-  { id: "R-001", traveler: "Andi Pratama",   travelerRoute: "Jakarta → Batam",      customer: "Budi Santoso",  rating: 5.0, review: "Traveler sangat ramah dan cepat! Barang tiba dalam kondisi sempurna. Sangat direkomendasikan untuk pengiriman barang elektronik.", date: "20 Feb 2024", orderId: "ORD-1201", category: "Pengiriman" },
-  { id: "R-002", traveler: "Sari Dewi",      travelerRoute: "Bandung → Surabaya",   customer: "Rina Kusuma",   rating: 3.0, review: "Barang sampai agak terlambat dari estimasi. Komunikasi cukup baik namun perlu ditingkatkan update statusnya.", date: "19 Feb 2024", orderId: "ORD-1198", category: "Titip Beli" },
-  { id: "R-003", traveler: "Dimas Wijaya",   travelerRoute: "Jakarta → Denpasar",   customer: "Maya Putri",    rating: 2.0, review: "Kurang teliti dalam penanganan barang, ada goresan di packaging. Seharusnya lebih hati-hati dengan barang fragil.", date: "18 Feb 2024", orderId: "ORD-1195", category: "Pengiriman" },
-  { id: "R-004", traveler: "Budi Santoso",   travelerRoute: "Yogyakarta → Jakarta", customer: "Ahmad Fauzi",   rating: 4.0, review: "Lumayan cepat, komunikasi baik selama perjalanan. Barang sampai aman.", date: "17 Feb 2024", orderId: "ORD-1190", category: "Pengiriman" },
-  { id: "R-005", traveler: "Andi Pratama",   travelerRoute: "Jakarta → Batam",      customer: "Lina Permata",  rating: 5.0, review: "Sangat memuaskan! Proses dari awal sampai akhir lancar. Pasti pakai jasa traveler ini lagi.", date: "16 Feb 2024", orderId: "ORD-1185", category: "Titip Beli" },
-  { id: "R-006", traveler: "Rizky Mahendra", travelerRoute: "Surabaya → Bali",      customer: "Dewi Lestari",  rating: 1.0, review: "Sangat mengecewakan! Barang tidak sampai tepat waktu dan traveler susah dihubungi. Tidak merekomendasikan.", date: "15 Feb 2024", orderId: "ORD-1180", category: "Pengiriman", flagged: true },
-];
 
 // ─── Animation variants ───────────────────────────────────────────────────────
 
@@ -80,7 +80,7 @@ function getRatingConfig(rating: number) {
 // ─── Stars ────────────────────────────────────────────────────────────────────
 
 function Stars({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" | "lg" }) {
-  const { star } = getRatingConfig(rating >= 1 ? rating : 1);
+  // rating 5 = 5 bintang kuning, bukan berdasarkan getRatingConfig
   const sz = size === "lg" ? "h-5 w-5" : size === "md" ? "h-[15px] w-[15px]" : "h-3 w-3";
   return (
     <div className="flex items-center gap-0.5">
@@ -91,7 +91,13 @@ function Stars({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" | "
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 + i * 0.055, duration: 0.22 }}
         >
-          <Star className={`${sz} ${i < rating ? `fill-current ${star}` : "fill-current text-border"}`} />
+          <Star
+            className={`${sz} ${
+              i < rating
+                ? "fill-yellow-400 text-yellow-400" 
+                : "fill-current text-border"
+            }`}
+          />
         </motion.div>
       ))}
     </div>
@@ -101,12 +107,18 @@ function Stars({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" | "
 // ─── Inline stars (no animation, for static use) ──────────────────────────────
 
 function StarsStatic({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" }) {
-  const { star } = getRatingConfig(rating >= 1 ? rating : 1);
   const sz = size === "md" ? "h-[15px] w-[15px]" : "h-2.5 w-2.5";
   return (
     <div className="flex items-center gap-0.5">
       {Array.from({ length: 5 }).map((_, i) => (
-        <Star key={i} className={`${sz} ${i < rating ? `fill-current ${star}` : "fill-current text-border"}`} />
+        <Star
+          key={i}
+          className={`${sz} ${
+            i < rating
+              ? "fill-yellow-400 text-yellow-400" 
+              : "fill-current text-border"
+          }`}
+        />
       ))}
     </div>
   );
@@ -159,10 +171,34 @@ function Avatar() {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function AdminReviews() {
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const [reviews, setReviews]   = useState<Review[]>(mockReviews);
-  const [filter,  setFilter]    = useState<"all"|"positive"|"neutral"|"negative"|"flagged">("all");
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [stats, setStats] = useState({
+    total: 0, positive: 0, neutral: 0, negative: 0, avg: "0.0"
+  });
+  const [filter, setFilter] = useState<"all"|"positive"|"neutral"|"negative">("all");
   const [selected, setSelected] = useState<Review | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    api.get("/admin/ratings")
+      .then(res => {
+        setReviews(res.data.data?.data ?? []);
+        const s = res.data.stats;
+        if (s) {
+          setStats({
+            total:    Number(s.total),
+            positive: Number(s.positive),
+            neutral:  Number(s.neutral),
+            negative: Number(s.negative),
+            avg:      Number(s.avg).toFixed(1),
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleFlag = (r: Review) => {
     setReviews(prev => prev.map(x => x.id === r.id ? { ...x, flagged: !x.flagged } : x));
@@ -174,23 +210,16 @@ export default function AdminReviews() {
     if (filter === "positive") return r.rating >= 4;
     if (filter === "neutral")  return r.rating === 3;
     if (filter === "negative") return r.rating < 3;
-    if (filter === "flagged")  return r.flagged;
     return true;
   });
 
-  const avg  = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1);
-  const stat = {
-    total:    reviews.length,
-    positive: reviews.filter(r => r.rating >= 4).length,
-    neutral:  reviews.filter(r => r.rating === 3).length,
-    negative: reviews.filter(r => r.rating < 3).length,
-    flagged:  reviews.filter(r => r.flagged).length,
-  };
 
   const ratingDist = [5,4,3,2,1].map(n => ({
     n,
     count: reviews.filter(r => r.rating === n).length,
-    pct:   (reviews.filter(r => r.rating === n).length / reviews.length) * 100,
+    pct:   reviews.length > 0
+      ? (reviews.filter(r => r.rating === n).length / reviews.length) * 100
+      : 0,
   }));
 
   return (
@@ -252,24 +281,24 @@ export default function AdminReviews() {
                     transition={{ duration: 0.6, delay: 0.3, ease: [0.34, 1.2, 0.64, 1] }}
                     className="text-7xl font-black leading-none text-primary-foreground tracking-tight"
                   >
-                    {Number(avg).toFixed(1)}
+                    {Number(stats.avg).toFixed(1)}
                   </motion.span>
                   <div className="flex flex-col items-center gap-2">
-                    <Stars rating={Math.round(Number(avg))} size="lg" />
+                    <Stars rating={Math.round(Number(stats.avg))} size="lg" />
                     <p className="text-[12px] text-primary-foreground/50 font-medium">dari 5 bintang</p>
                   </div>
                 </div>
-                <p className="text-sm text-primary-foreground/50 font-semibold">{stat.total} ulasan terkumpul</p>
+                <p className="text-sm text-primary-foreground/50 font-semibold">{stats.total} ulasan terkumpul</p>
               </div>
             </div>
 
             {/* ── MIDDLE: 4 mini stats ── */}
             <div className="p-5 grid grid-cols-2 gap-3">
               {([
-                { label: "Total Ulasan", value: stat.total,    icon: MessageSquare, iconBg: "bg-primary/10",  iconColor: "text-primary",     valColor: "text-foreground",   accent: "bg-primary"    },
-                { label: "Positif",      value: stat.positive, icon: ThumbsUp,      iconBg: "bg-emerald-50",  iconColor: "text-emerald-600", valColor: "text-emerald-600",  accent: "bg-emerald-400" },
-                { label: "Netral",       value: stat.neutral,  icon: Minus,         iconBg: "bg-amber-50",    iconColor: "text-amber-600",   valColor: "text-amber-600",    accent: "bg-amber-400"   },
-                { label: "Negatif",      value: stat.negative, icon: ThumbsDown,    iconBg: "bg-red-50",      iconColor: "text-red-500",     valColor: "text-red-500",      accent: "bg-red-400"     },
+                { label: "Total Ulasan", value: stats.total,    icon: MessageSquare, iconBg: "bg-primary/10",  iconColor: "text-primary",     valColor: "text-foreground",   accent: "bg-primary"    },
+                { label: "Positif",      value: stats.positive, icon: ThumbsUp,      iconBg: "bg-emerald-50",  iconColor: "text-emerald-600", valColor: "text-emerald-600",  accent: "bg-emerald-400" },
+                { label: "Netral",       value: stats.neutral,  icon: Minus,         iconBg: "bg-amber-50",    iconColor: "text-amber-600",   valColor: "text-amber-600",    accent: "bg-amber-400"   },
+                { label: "Negatif",      value: stats.negative, icon: ThumbsDown,    iconBg: "bg-red-50",      iconColor: "text-red-500",     valColor: "text-red-500",      accent: "bg-red-400"     },
               ] as const).map((s, i) => (
                 <motion.div
                   key={i}
@@ -288,7 +317,7 @@ export default function AdminReviews() {
                     <s.icon className={`h-3.5 w-3.5 ${s.iconColor}`} />
                   </div>
                   <p className={`text-xl font-bold leading-none ${s.valColor}`}>
-                    <CountUp end={s.value} duration={900} />
+                    <CountUp key={s.value} end={s.value} duration={900} />
                   </p>
                   <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">{s.label}</p>
                 </motion.div>
@@ -329,17 +358,18 @@ export default function AdminReviews() {
 
         {/* ── FILTER TABS ─────────────────────────────────── */}
         <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pb-0.5">
-          <Chip label={`Semua (${stat.total})`}      active={filter==="all"}      onClick={() => setFilter("all")} />
-          <Chip label={`Positif (${stat.positive})`} active={filter==="positive"} onClick={() => setFilter("positive")} />
-          <Chip label={`Netral (${stat.neutral})`}   active={filter==="neutral"}  onClick={() => setFilter("neutral")} />
-          <Chip label={`Negatif (${stat.negative})`} active={filter==="negative"} onClick={() => setFilter("negative")} />
-          {stat.flagged > 0 && (
-            <Chip label={`⚑ Bermasalah (${stat.flagged})`} active={filter==="flagged"} onClick={() => setFilter("flagged")} />
-          )}
+          <Chip label={`Semua (${stats.total})`}      active={filter==="all"}      onClick={() => setFilter("all")} />
+          <Chip label={`Positif (${stats.positive})`} active={filter==="positive"} onClick={() => setFilter("positive")} />
+          <Chip label={`Netral (${stats.neutral})`}   active={filter==="neutral"}  onClick={() => setFilter("neutral")} />
+          <Chip label={`Negatif (${stats.negative})`} active={filter==="negative"} onClick={() => setFilter("negative")} />
         </div>
 
         {/* ── REVIEW LIST ─────────────────────────────────── */}
-        {filtered.length > 0 ? (
+       {loading ? (
+          <div className="flex justify-center py-16">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        ) : filtered.length > 0 ? (
           <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-2.5">
             {filtered.map(r => {
               const cfg = getRatingConfig(r.rating);
@@ -427,9 +457,11 @@ export default function AdminReviews() {
                         <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 text-[11px] text-muted-foreground font-medium border border-border/40">
                           {r.travelerRoute}
                         </span>
-                        <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 text-[11px] text-muted-foreground font-medium border border-border/40">
-                          {r.category}
-                        </span>
+                        {r.category && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 text-[11px] text-muted-foreground font-medium border border-border/40">
+                            {r.category}
+                          </span>
+                        )}
                         <span className="text-[11px] text-muted-foreground/60 ml-auto">{r.date}</span>
                       </div>
                     </div>
@@ -449,24 +481,11 @@ export default function AdminReviews() {
             const RIcon = cfg.icon;
             return (
               <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-                <DialogContent className="
-                  p-0 overflow-hidden gap-0
-                  w-full max-h-[92dvh] rounded-t-3xl rounded-b-none
-                  sm:w-[calc(100vw-2rem)] sm:max-w-md sm:rounded-2xl sm:max-h-[85dvh]
-                  fixed bottom-0 left-0 translate-x-0 translate-y-0
-                  sm:relative sm:bottom-auto sm:left-auto
-                  data-[state=open]:animate-in data-[state=closed]:animate-out
-                  data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom
-                  sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:zoom-out-95
-                ">
-                  {/* Drag handle */}
-                  <div className="flex justify-center pt-3 pb-1 sm:hidden">
-                    <div className="h-1 w-10 rounded-full bg-border" />
-                  </div>
+                <DialogContent className="p-0 overflow-hidden gap-0 max-w-md rounded-2xl">
 
-                  <div className="overflow-y-auto overscroll-contain">
+                  <div className="overflow-y-auto max-h-[80vh]">
                     {/* Header */}
-                    <div className={`relative overflow-hidden px-5 pt-4 sm:pt-5 pb-5 border-b border-border/60 ${cfg.bg}`}>
+                    <div className={`relative overflow-hidden px-5 pt-5 pb-5 border-b border-border/60 ${cfg.bg}`}>
                       <div className={`absolute left-0 top-0 bottom-0 w-1 ${cfg.accent}`} />
                       <div className="flex items-start justify-between gap-3 pl-2">
                         <div>
@@ -508,7 +527,7 @@ export default function AdminReviews() {
                         <InfoRow icon={User}         label="Traveler" value={selected.traveler} />
                         <InfoRow icon={User}         label="Customer" value={selected.customer} />
                         <InfoRow icon={CalendarDays} label="Tanggal"  value={selected.date} />
-                        <InfoRow icon={TrendingUp}   label="Kategori" value={selected.category} />
+                        <InfoRow icon={TrendingUp} label="Kategori" value={selected.category ?? '-'} />
                       </div>
 
                       <div className="rounded-xl bg-muted/40 border border-border/50 px-4 py-3">

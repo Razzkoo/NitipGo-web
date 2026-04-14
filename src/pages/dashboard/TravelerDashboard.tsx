@@ -51,13 +51,6 @@ const pendingOrders = [
   },
 ];
 
-const stats = [
-  { label: "Total Trip", value: 45, icon: MapPin, color: "text-primary", bgColor: "bg-primary/10" },
-  { label: "Order Selesai", value: 127, icon: Package, color: "text-success", bgColor: "bg-success/10" },
-  { label: "Saldo", value: 2500000, prefix: "Rp ", suffix: "", icon: Wallet, color: "text-accent", bgColor: "bg-accent/10", formatK: true },
-  { label: "Rating", value: 4.9, decimals: 1, icon: Star, color: "text-warning", bgColor: "bg-warning/10" },
-];
-
 const staggerContainer = {
   hidden: { opacity: 0 },
   show: {
@@ -84,18 +77,48 @@ function formatCurrency(value: number): string {
 }
 
 export default function TravelerDashboard() {
-  const [upcomingTrips, setUpcomingTrips] = useState<Trip[]>([]);
   const [loadingTrips, setLoadingTrips] = useState(true);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/traveler/trips")
-      .then(res => {
-    
-        setUpcomingTrips((res.data.trips ?? []).slice(0, 2));
-      })
+    api.get("/traveler/dashboard")
+      .then(res => setDashboardData(res.data.data))
       .catch(err => console.error(err))
-      .finally(() => setLoadingTrips(false));
+      .finally(() => setLoading(false));
   }, []);
+
+  const statsData = dashboardData?.stats;
+  const upcomingTrips = dashboardData?.upcoming_trips ?? [];
+  const pendingOrders = dashboardData?.pending_orders ?? [];
+
+  const stats = [
+    { label: "Total Trip",    value: statsData?.total_trips ?? 0,    icon: MapPin,  color: "text-primary", bgColor: "bg-primary/10" },
+    { label: "Order Selesai", value: statsData?.orders_finished ?? 0, icon: Package, color: "text-success", bgColor: "bg-success/10" },
+    { label: "Rating",        value: statsData?.rating ?? 0,          icon: Star,    color: "text-warning", bgColor: "bg-warning/10", decimals: 1 },
+    { label: "Saldo", value: statsData?.balance ?? 0, icon: Wallet, color: "text-accent", bgColor: "bg-accent/10", isCurrency: true },  
+  ];
+
+
+  const handleAccept = async (orderId: number) => {
+    try {
+      await api.patch(`/traveler/orders/${orderId}/accept`);
+      setDashboardData((prev: any) => ({
+        ...prev,
+        pending_orders: prev.pending_orders.filter((o: any) => o.id !== orderId),
+      }));
+    } catch (err) { console.error(err); }
+  };
+
+  const handleReject = async (orderId: number) => {
+    try {
+      await api.patch(`/traveler/orders/${orderId}/reject`, { reason: "Ditolak dari dashboard" });
+      setDashboardData((prev: any) => ({
+        ...prev,
+        pending_orders: prev.pending_orders.filter((o: any) => o.id !== orderId),
+      }));
+    } catch (err) { console.error(err); }
+  };
 
 
   return (
@@ -140,16 +163,12 @@ export default function TravelerDashboard() {
                 <div>
                   <p className="text-sm text-muted-foreground">{stat.label}</p>
                   <p className="text-2xl font-bold text-foreground mt-1">
-                    {stat.formatK ? (
-                      <>Rp <CountUp end={stat.value / 1000000} decimals={1} duration={1500} /> jt</>
+                    {stat.isCurrency ? (
+                      <span className="text-xl font-bold">
+                        Rp {Number(stat.value).toLocaleString("id-ID")}
+                      </span>
                     ) : (
-                      <CountUp 
-                        end={stat.value} 
-                        decimals={stat.decimals || 0}
-                        prefix={stat.prefix}
-                        suffix={stat.suffix}
-                        duration={1500} 
-                      />
+                      <CountUp key={stat.value} end={stat.value} decimals={stat.decimals ?? 0} duration={1500} />
                     )}
                   </p>
                 </div>
@@ -179,9 +198,9 @@ export default function TravelerDashboard() {
               </Button>
             </div>
 
-            {loadingTrips ? (
-                  <p className="text-sm text-muted-foreground">Loading trips...</p>
-                ) : upcomingTrips.length > 0 ? (
+            {loading ? (
+                <p className="text-sm text-muted-foreground">Memuat...</p>
+              ) : upcomingTrips.length > 0 ? (
               <div className="space-y-4">
                 {upcomingTrips.map((trip, i) => (
                   <motion.div
@@ -281,8 +300,8 @@ export default function TravelerDashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">{order.route}</span>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm">Tolak</Button>
-                        <Button size="sm">Terima</Button>
+                        <Button variant="outline" size="sm" onClick={() => handleReject(order.id)}>Tolak</Button>
+                        <Button size="sm" onClick={() => handleAccept(order.id)}>Terima</Button>
                       </div>
                     </div>
                   </motion.div>
@@ -315,11 +334,14 @@ export default function TravelerDashboard() {
             <div>
               <p className="text-accent-foreground/80">Total Saldo</p>
               <p className="text-3xl font-bold mt-1">
-                Rp <CountUp end={2500000} duration={2000} suffix="" />
+                Rp {(statsData?.balance ?? 0).toLocaleString("id-ID")}
               </p>
               <p className="text-sm text-accent-foreground/70 mt-1 flex items-center gap-1">
                 <TrendingUp className="h-4 w-4" />
-                +Rp 450.000 bulan ini
+                {statsData?.income_this_month > 0
+                  ? `+Rp ${Number(statsData.income_this_month).toLocaleString("id-ID")} bulan ini`
+                  : "Belum ada pendapatan bulan ini"
+                }
               </p>
             </div>
             <Button variant="white" size="lg" asChild className="shadow-lg">

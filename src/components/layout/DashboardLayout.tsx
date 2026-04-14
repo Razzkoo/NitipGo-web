@@ -26,7 +26,8 @@ import {
   Megaphone,
   Sparkles,
   Captions,
-  Landmark
+  BookText,
+  BadgeInfo
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
@@ -67,6 +68,7 @@ const travelerNavItems: NavItem[] = [
   { name: "Dashboard", href: "/traveler", icon: LayoutDashboard },
   { name: "Perjalanan", href: "/traveler/trip", icon: Plane },
   { name: "Order", href: "/traveler/orders", icon: Package },
+  { name: "Laporan & Ulasan", href: "/traveler/report", icon: BookText },
   { name: "Saldo", href: "/traveler/wallet", icon: Wallet },
   { name: "Profil", href: "/traveler/profile", icon: User },
   { name: "Pengaturan", href: "/traveler/settings", icon: Settings },
@@ -83,15 +85,7 @@ const adminNavItems: NavItem[] = [
       { name: "Traveler", href: "/admin/travelers", icon: Plane},
     ],
   },
-  {
-    name: "Transaksi",
-    href: "/admin/transactions",
-    icon: Captions,
-    children: [
-      { name: "Transaksi", href: "/admin/transactions", icon: Banknote },
-      { name: "Bank & E-wallet", href: "/admin/bank", icon: Landmark },
-    ],
-  },
+  { name: "Transaksi", href: "/admin/transactions", icon: Banknote },
   { name: "Rating", href: "/admin/rating", icon: Star },
   {
     name: "Langganan",
@@ -103,12 +97,44 @@ const adminNavItems: NavItem[] = [
     ],
   },
   { name: "Kota & Rute", href: "/admin/routes", icon: Route },
-  { name: "Dispute", href: "/admin/disputes", icon: AlertTriangle },
-  { name: "Saldo", href: "/admin/wallet", icon: Wallet },
+  {
+    name: "Laporan",
+    href: "/admin/disputes",
+    icon: BookText,
+    children: [
+      { name: "Dispute", href: "/admin/disputes", icon: AlertTriangle },
+      { name: "Bantuan", href: "/admin/help", icon: BadgeInfo },
+    ],
+  },
+  { name: "Saldo Platform", href: "/admin/wallet", icon: Wallet },
   { name: "Profil", href: "/admin/profile", icon: User },
   { name: "Pengaturan", href: "/admin/settings", icon: Settings },
 
 ];
+
+// Mobile 
+const mobileBottomNav: Record<UserRole, NavItem[]> = {
+  customer: [
+    { name: "Beranda", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Order", href: "/orders", icon: Package },
+    { name: "Riwayat", href: "/history", icon: Clock },
+    { name: "Profil", href: "/profile", icon: User },
+  ],
+  traveler: [
+    { name: "Beranda", href: "/traveler", icon: LayoutDashboard },
+    { name: "Perjalanan", href: "/traveler/trip", icon: Plane },
+    { name: "Order", href: "/traveler/orders", icon: Package },
+    { name: "Saldo", href: "/traveler/wallet", icon: Wallet },
+    { name: "Laporan", href: "/traveler/report", icon: BookText },
+  ],
+  admin: [
+    { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { name: "Pengguna", href: "/admin/users", icon: Users },
+    { name: "Transaksi", href: "/admin/transactions", icon: Banknote },
+    { name: "Saldo", href: "/admin/wallet", icon: Wallet },
+    { name: "Lainnya", href: "#", icon: Menu }, // trigger sidebar
+  ],
+};
 
 const roleConfig = {
   customer: {
@@ -463,14 +489,66 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
         {/* Page Content with Animation */}
         <motion.main
         key={location.pathname}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
-        className="flex-1 overflow-auto"
+        className="flex-1 overflow-auto pb-20 lg:pb-0"
       >
           {children}
         </motion.main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border">
+        <div className="flex items-center justify-around px-1 py-1.5">
+          {mobileBottomNav[role].map((item) => {
+            // Item "Lainnya" untuk admin → trigger sidebar
+            if (item.href === "#") {
+              return (
+                <button
+                  key="more"
+                  onClick={() => setSidebarOpen(true)}
+                  className="flex flex-col items-center gap-0.5 px-3 py-1.5 min-w-0"
+                >
+                  <div className="flex items-center justify-center w-10 h-7 rounded-xl">
+                    <item.icon className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <span className="text-[10px] font-medium text-muted-foreground">{item.name}</span>
+                </button>
+              );
+            }
+
+            const isActive = isActiveLink(item.href);
+            return (
+              <Link
+                key={item.href}
+                to={item.href}
+                className="flex flex-col items-center gap-0.5 px-3 py-1.5 min-w-0"
+              >
+                <motion.div
+                  animate={{ scale: isActive ? 1.15 : 1 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  className={cn(
+                    "flex items-center justify-center w-10 h-7 rounded-xl transition-all",
+                    isActive ? "bg-primary/15" : ""
+                  )}
+                >
+                  <item.icon className={cn(
+                    "h-5 w-5 transition-colors",
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  )} />
+                </motion.div>
+                <span className={cn(
+                  "text-[10px] font-medium truncate max-w-[56px] text-center",
+                  isActive ? "text-primary" : "text-muted-foreground"
+                )}>
+                  {item.name}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

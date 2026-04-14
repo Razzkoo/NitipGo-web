@@ -19,6 +19,7 @@ import CustomerHelp from "./pages/CustomerHelp";
 import { AppSettingsProvider } from "./components/layout/AppSettingsContent";
 import { OrderProvider  } from "./context/OrderContext";
 import ChatTraveler from "./pages/Chat-Traveler";
+import AdsSuccess from "./pages/admin/AdvertisementSuccess";
 
 // Legal Pages
 import Terms from "./pages/legal/Terms";
@@ -53,6 +54,7 @@ import TripDetails from "./pages/traveler/TripDetail";
 import WalletWithdraw from "./pages/traveler/WalletWithdraw";
 import WalletHistory from "./pages/traveler/WalletHistory";
 import PaymentBoost from "./pages/traveler/PaymentBoost";
+import TravelerReports from "./pages/traveler/Report";
 
 // Admin Pages
 import AdminUsers from "./pages/admin/Users";
@@ -65,6 +67,7 @@ import AdminRating from "./pages/admin/Rating";
 import AdminBooster from "./pages/admin/Booster";
 import AdminAds from "./pages/admin/Advertisement";
 import AdminTravelers from "./pages/admin/Travelers";
+import AdminHelp from "./pages/admin/AdminHelp";
 
 // Profile Pages
 import CustomerProfile from "./pages/profile/CustomerProfile";
@@ -106,7 +109,8 @@ const App = () => (
           <Route path="/faq" element={<FAQ />} />
           <Route path="/kontak" element={<Contact />} />
           <Route path="/daftar-traveler" element={<TravelerRegister />} />
-          
+          <Route path="/iklan/sukses" element={<AdsSuccess />} />
+
           {/* Legal Pages */}
           <Route path="/syarat-ketentuan" element={<Terms />} />
           <Route path="/privasi" element={<Privacy />} />
@@ -154,6 +158,7 @@ const App = () => (
           <Route path="/traveler/tariksaldo" element={<WalletWithdraw />} />
           <Route path="/traveler/riwayatsaldo" element={<WalletHistory />} />
           <Route path="/traveler/boost/payment" element={<PaymentBoost />} />
+          <Route path="/traveler/report" element={<TravelerReports />} />
           
           {/* Admin Dashboard */}
           <Route path="/admin" element={<AdminDashboard />} />
@@ -170,6 +175,7 @@ const App = () => (
           <Route path="/admin/rating" element={<AdminRating />} />
           <Route path="/admin/boosters" element={<AdminBooster />} />
           <Route path="/admin/ads" element={<AdminAds />} />
+          <Route path="/admin/help" element={<AdminHelp />} />
           
           {/* Live Chat */}
           <Route path="/live-chat" element={<LiveChat />} />

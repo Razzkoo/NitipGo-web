@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell,
@@ -19,55 +19,30 @@ import {
   BarChart3,
   CircleCheck,
 } from "lucide-react";
+import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
 import { Link, useNavigate } from "react-router-dom";
 
-// ─── Boost Plans ──────────────────────────────────────────────────────────────
-const boostPlans = [
-  {
-    id: "7days",
-    days: 7,
-    price: 15000,
-    label: "Basic Boost",
-    sublabel: "Coba Dulu",
-    icon: Clock,
-    isPopular: false,
-    isPremium: false,
-  },
-  {
-    id: "14days",
-    days: 14,
-    price: 35000,
-    label: "Pro Boost",
-    sublabel: "Paket Terlaris",
-    icon: Zap,
-    isPopular: true,
-    isPremium: false,
-  },
-  {
-    id: "30days",
-    days: 30,
-    price: 65000,
-    label: "Elite Boost",
-    sublabel: "Dominasi Penuh",
-    icon: Crown,
-    isPopular: false,
-    isPremium: true,
-  },
-];
-
 // ─── Boost Modal ──────────────────────────────────────────────────────────────
-function BoostModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function BoostModal({ open, onClose, plans }: { open: boolean; onClose: () => void; plans: any[] }) {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSelect = (plan: (typeof boostPlans)[0]) => {
+  const handleSelect = (plan: any) => {
     onClose();
-    navigate("/traveler/boost/payment", { state: { days: plan.days, price: plan.price } });
-    toast({ title: `Paket ${plan.label} dipilih!`, description: `Aktif selama ${plan.days} hari.` });
+    navigate("/traveler/boost/payment", {
+      state: {
+        boosterId: plan.boosterId,
+        days: plan.days,
+        price: plan.price,
+        label: plan.label,
+        sublabel: plan.sublabel,
+        color: plan.color,
+      }
+    });
   };
 
   return (
@@ -134,7 +109,7 @@ function BoostModal({ open, onClose }: { open: boolean; onClose: () => void }) {
 
             {/* Plans */}
             <div className="px-5 pt-5 pb-4 space-y-3 bg-white">
-              {boostPlans.map((plan) => {
+              {plans.map((plan) => {
                 const Icon = plan.icon;
                 return (
                   <motion.button
@@ -143,22 +118,10 @@ function BoostModal({ open, onClose }: { open: boolean; onClose: () => void }) {
                     whileTap={{ scale: 0.985 }}
                     onClick={() => handleSelect(plan)}
                     className="relative w-full flex items-center justify-between rounded-2xl p-4 text-left transition-all"
-                    style={
-                      plan.isPopular
-                        ? {
-                            background: "linear-gradient(130deg, #7db375 0%, #5a9e6f 100%)",
-                            boxShadow: "0 8px 24px -4px rgba(125,179,117,0.4)",
-                          }
-                        : plan.isPremium
-                        ? {
-                            background: "linear-gradient(130deg, #8ea886 0%, #77b18c 100%)",
-                            boxShadow: "0 6px 20px -4px rgba(119,177,140,0.3)",
-                          }
-                        : {
-                            background: "#f8fafc",
-                            border: "2px solid #e2e8f0",
-                          }
-                    }
+                    style={{
+                      background: `linear-gradient(130deg, ${plan.color} 0%, ${plan.color}cc 100%)`,
+                      boxShadow: `0 8px 24px -4px ${plan.color}55`,
+                    }}
                   >
                     {plan.isPopular && (
                       <span className="absolute -top-2.5 right-4 text-[10px] font-semibold uppercase tracking-wide px-3 py-0.5 rounded-full bg-yellow-400 text-yellow-900 shadow">
@@ -169,32 +132,20 @@ function BoostModal({ open, onClose }: { open: boolean; onClose: () => void }) {
                     <div className="flex items-center gap-3.5">
                       <div
                         className="flex h-10 w-10 items-center justify-center rounded-xl"
-                        style={
-                          plan.isPopular || plan.isPremium
-                            ? { background: "rgba(255,255,255,0.2)" }
-                            : { background: "#e2e8f0" }
-                        }
+                        style={{ background: "rgba(255,255,255,0.2)" }}
                       >
                         <Icon
                           className="h-5 w-5"
-                          style={{ color: plan.isPopular || plan.isPremium ? "white" : "#64748b" }}
+                          style={{ color: "white" }}
                         />
                       </div>
                       <div>
-                        <p
-                          className="font-semibold text-sm"
-                          style={{ color: plan.isPopular || plan.isPremium ? "white" : "#1e293b" }}
-                        >
-                          {plan.sublabel}
+                        <p className="font-semibold text-sm"
+                          style={{ color: "white" }}>
+                          {plan.label}
                         </p>
-                        <p
-                          className="text-xs font-normal"
-                          style={{
-                            color: plan.isPopular || plan.isPremium
-                              ? "rgba(240,253,244,0.70)"
-                              : "#94a3b8",
-                          }}
-                        >
+                        <p className="text-xs font-normal"
+                          style={{ color: "rgba(240,253,244,0.70)" }}>
                           Aktif selama {plan.days} hari
                         </p>
                       </div>
@@ -203,15 +154,13 @@ function BoostModal({ open, onClose }: { open: boolean; onClose: () => void }) {
                     <div className="flex items-center gap-2">
                       <p
                         className="text-lg font-bold leading-none"
-                        style={{ color: plan.isPopular || plan.isPremium ? "white" : "#0f172a" }}
+                        style={{ color: "white" }}
                       >
                         Rp{plan.price / 1000}rb
                       </p>
                       <ArrowRight
                         className="h-4 w-4"
-                        style={{
-                          color: plan.isPopular || plan.isPremium ? "rgba(255,255,255,0.4)" : "#cbd5e1",
-                        }}
+                        style={{ color: "rgba(255,255,255,0.4)" }}
                       />
                     </div>
                   </motion.button>
@@ -258,9 +207,48 @@ export default function TravelerSettings() {
   const { toast } = useToast();
   const [boostOpen, setBoostOpen] = useState(false);
 
+  // Booster
+  const [boostPlans, setBoostPlans] = useState<any[]>([]);
+  const [activeBooster, setActiveBooster] = useState<any>(null);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+
   const handleSave = () => {
     toast({ title: "Pengaturan Disimpan", description: "Preferensi Anda telah berhasil disimpan." });
   };
+
+  // Fetch booster
+  useEffect(() => {
+    api.get("/traveler/boosters/plans").then(res => {
+      const raw = res.data.data ?? [];
+      const sorted = [...raw].sort((a: any, b: any) => a.priority - b.priority);
+
+      setBoostPlans(sorted.map((b: any, idx: number) => {
+        const total = sorted.length;
+        const isPopular = total > 2 && idx === Math.floor(total / 2);
+        const isPremium = idx === total - 1 && total > 1;
+
+        return {
+          id: b.id,
+          boosterId: b.id,
+          days: b.duration,
+          price: Number(b.price),
+          label: b.name,
+          sublabel: b.name,
+          description: b.description,
+          color: b.color ?? "#22c55e",
+          slots: b.slots,
+          priority: b.priority,
+          isPopular,
+          isPremium,
+          icon: Rocket, 
+        };
+      }));
+    }).catch(() => {});
+
+    api.get("/traveler/boosters/active").then(res => {
+      setActiveBooster(res.data.data);
+    }).catch(() => {}).finally(() => setLoadingPlans(false));
+  }, []);
 
   const settingSections = [
     {
@@ -491,28 +479,46 @@ export default function TravelerSettings() {
                       className="rounded-xl p-2.5 text-center"
                       style={
                         plan.isPopular
-                          ? {
-                              background: "rgba(251,191,36,0.20)",
-                              border: "1.5px solid rgba(251,191,36,0.45)",
-                            }
-                          : {
-                              background: "rgba(255,255,255,0.07)",
-                              border: "1px solid rgba(255,255,255,0.1)",
-                            }
+                          ? { background: plan.color + "33", border: `1.5px solid ${plan.color}88` }
+                          : { background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }
                       }
                     >
-                      <p className="text-[9px] font-normal uppercase mb-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>
-                        {plan.days} hari
+                      {/* Dot warna plan */}
+                      <div
+                        className="w-2 h-2 rounded-full mx-auto mb-1"
+                        style={{ backgroundColor: plan.color }}
+                      />
+                      <p className="text-[9px] font-normal uppercase mb-0.5"
+                        style={{ color: "rgba(255,255,255,0.38)" }}>
+                        {plan.days}h
                       </p>
-                      <p className="text-sm font-bold text-white leading-none">{plan.price / 1000}rb</p>
+                      <p className="text-sm font-bold text-white leading-none">
+                        {plan.price >= 1_000_000
+                          ? (plan.price / 1_000_000).toFixed(1) + "jt"
+                          : (plan.price / 1_000) + "rb"
+                        }
+                      </p>
                       {plan.isPopular && (
-                        <p className="text-[9px] font-semibold mt-1 uppercase tracking-wide" style={{ color: "#fbbf24" }}>
-                          Terbaik
+                        <p className="text-[9px] font-semibold mt-1 uppercase tracking-wide"
+                          style={{ color: plan.color }}>
+                          Terlaris
                         </p>
                       )}
                     </div>
                   ))}
                 </div>
+
+                {activeBooster && (
+                  <div className="mb-4 rounded-xl p-3 text-center"
+                    style={{
+                      background: (activeBooster.color ?? "#22c55e") + "22",
+                      border: `1px solid ${activeBooster.color ?? "#22c55e"}44`,
+                    }}>
+                    <p className="text-[10px] text-white/50 uppercase tracking-widest mb-0.5">Booster Aktif</p>
+                    <p className="text-white font-semibold text-sm">{activeBooster.plan}</p>
+                    <p className="text-white/60 text-xs">{activeBooster.days_left} hari tersisa</p>
+                  </div>
+                )}
 
                 {/* CTA */}
                 <motion.button
@@ -549,7 +555,7 @@ export default function TravelerSettings() {
         </div>
       </div>
 
-      <BoostModal open={boostOpen} onClose={() => setBoostOpen(false)} />
+      <BoostModal open={boostOpen} onClose={() => setBoostOpen(false)} plans={boostPlans} />
     </DashboardLayout>
   );
 }

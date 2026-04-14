@@ -10,13 +10,35 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-const travelerIcon = new L.Icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
+const travelerIcon = L.divIcon({
+  className: "",
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
+  popupAnchor: [0, -24],
+  html: `
+    <div style="
+      width: 40px; height: 40px;
+      background: #10b981;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(16,185,129,0.4), 0 0 0 3px white;
+      animation: pulse-ring 2s ease-out infinite;
+    ">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
+        <path d="M15 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 13.52 9H14"/>
+        <circle cx="17" cy="18" r="2"/>
+        <circle cx="7" cy="18" r="2"/>
+      </svg>
+    </div>
+    <style>
+      @keyframes pulse-ring {
+        0% { box-shadow: 0 2px 8px rgba(16,185,129,0.4), 0 0 0 3px white; }
+        70% { box-shadow: 0 2px 8px rgba(16,185,129,0.4), 0 0 0 8px rgba(16,185,129,0); }
+        100% { box-shadow: 0 2px 8px rgba(16,185,129,0.4), 0 0 0 3px white; }
+      }
+    </style>
+  `,
 });
 
 interface TrackingPoint {
@@ -128,13 +150,6 @@ export default function TripTrackingMap({ route, latest, isTracking, travelerNam
         {/* Polyline rute */}
         {polylinePositions.length > 1 && (
           <Polyline positions={polylinePositions} color="#10b981" weight={4} opacity={0.8} />
-        )}
-
-        {/* Marker titik awal */}
-        {validRoute.length > 0 && (
-          <Marker position={[validRoute[0].latitude, validRoute[0].longitude]}>
-            <Popup>Titik awal tracking</Popup>
-          </Marker>
         )}
 
         {/* Marker posisi terakhir */}

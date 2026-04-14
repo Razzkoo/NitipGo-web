@@ -30,7 +30,7 @@ import {
   Route,
   LogOut,
   Menu,
-  X,
+  Plus,
   Edit2,
   Save,
   XCircle,
@@ -41,191 +41,11 @@ import {
   ToggleRight,
   LoaderPinwheel
 } from "lucide-react";
+import api from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
-// ─── Mock Data ──────────────────────────────────────────────────────────────────
-
-const boosterStats = [
-  { id: 1, label: "Total Booster Aktif", value: 128, change: +12, icon: Rocket, color: "primary" },
-  { id: 2, label: "Booster Digunakan Hari Ini", value: 47, change: +8, icon: Zap, color: "accent" },
-  { id: 3, label: "Pendapatan Booster", value: "Rp 4,2Jt", change: +18, icon: TrendingUp, color: "success" },
-  { id: 4, label: "Expired Minggu Ini", value: 14, change: -3, icon: Clock, color: "warning" },
-];
-
-const initialBoosterPlans = [
-  {
-    id: 1,
-    name: "Basic Boost",
-    price: 15000,
-    duration: 7,
-    slots: 3,
-    color: "#22c55e",
-    count: 52,
-    active: true,
-    description: "Cocok untuk traveler pemula yang ingin tampil lebih di pencarian.",
-  },
-  {
-    id: 2,
-    name: "Pro Boost",
-    price: 35000,
-    duration: 14,
-    slots: 8,
-    color: "#f97316",
-    count: 43,
-    active: true,
-    description: "Tingkatkan visibilitas lebih lama dengan slot order lebih banyak.",
-  },
-  {
-    id: 3,
-    name: "Elite Boost",
-    price: 65000,
-    duration: 30,
-    slots: 20,
-    color: "#8b5cf6",
-    count: 33,
-    active: true,
-    description: "Maksimalkan eksposur sepanjang bulan, prioritas teratas di semua rute.",
-  },
-];
-
-const travelerBoosters = [
-  {
-    id: "TRV-001",
-    name: "Andi Pratama",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=andi",
-    plan: "Pro Boost",
-    planColor: "#f97316",
-    status: "active",
-    startDate: "2025-06-01",
-    endDate: "2025-06-15",
-    ordersGained: 24,
-    rating: 4.9,
-    routes: ["CGK - SIN", "CGK - KUL"],
-    revenue: "Rp 1.250.000",
-    daysLeft: 8,
-    phone: "+62 812-3456-7890",
-    joinDate: "2024-01-15",
-  },
-  {
-    id: "TRV-002",
-    name: "Siti Rahma",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=siti",
-    plan: "Elite Boost",
-    planColor: "#8b5cf6",
-    status: "active",
-    startDate: "2025-05-25",
-    endDate: "2025-06-24",
-    ordersGained: 41,
-    rating: 4.8,
-    routes: ["SUB - CGK", "DPS - SIN"],
-    revenue: "Rp 2.780.000",
-    daysLeft: 17,
-    phone: "+62 821-9876-5432",
-    joinDate: "2023-11-08",
-  },
-  {
-    id: "TRV-003",
-    name: "Budi Santoso",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=budi",
-    plan: "Basic Boost",
-    planColor: "#22c55e",
-    status: "expired",
-    startDate: "2025-05-20",
-    endDate: "2025-05-27",
-    ordersGained: 11,
-    rating: 4.6,
-    routes: ["CGK - SIN"],
-    revenue: "Rp 620.000",
-    daysLeft: 0,
-    phone: "+62 856-1234-5678",
-    joinDate: "2024-03-22",
-  },
-  {
-    id: "TRV-004",
-    name: "Maya Anggraini",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=maya",
-    plan: "Pro Boost",
-    planColor: "#f97316",
-    status: "active",
-    startDate: "2025-06-03",
-    endDate: "2025-06-17",
-    ordersGained: 18,
-    rating: 4.7,
-    routes: ["MES - CGK", "PDG - CGK"],
-    revenue: "Rp 980.000",
-    daysLeft: 10,
-    phone: "+62 878-5555-9999",
-    joinDate: "2024-02-10",
-  },
-  {
-    id: "TRV-005",
-    name: "Rizky Hidayat",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=rizky",
-    plan: "Elite Boost",
-    planColor: "#8b5cf6",
-    status: "suspended",
-    startDate: "2025-06-01",
-    endDate: "2025-07-01",
-    ordersGained: 5,
-    rating: 3.2,
-    routes: ["CGK - SIN"],
-    revenue: "Rp 270.000",
-    daysLeft: 24,
-    phone: "+62 895-7777-0001",
-    joinDate: "2024-05-01",
-  },
-  {
-    id: "TRV-006",
-    name: "Dewi Kurnia",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=dewi",
-    plan: "Basic Boost",
-    planColor: "#22c55e",
-    status: "active",
-    startDate: "2025-06-05",
-    endDate: "2025-06-12",
-    ordersGained: 9,
-    rating: 4.5,
-    routes: ["BPN - CGK"],
-    revenue: "Rp 430.000",
-    daysLeft: 5,
-    phone: "+62 812-0000-1111",
-    joinDate: "2024-04-17",
-  },
-  {
-    id: "TRV-007",
-    name: "Fajar Nugroho",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=fajar",
-    plan: "Pro Boost",
-    planColor: "#f97316",
-    status: "active",
-    startDate: "2025-06-02",
-    endDate: "2025-06-16",
-    ordersGained: 20,
-    rating: 4.9,
-    routes: ["JOG - CGK", "JOG - SIN"],
-    revenue: "Rp 1.100.000",
-    daysLeft: 9,
-    phone: "+62 831-2222-3333",
-    joinDate: "2023-12-01",
-  },
-  {
-    id: "TRV-008",
-    name: "Laila Fitriani",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=laila",
-    plan: "Basic Boost",
-    planColor: "#22c55e",
-    status: "expired",
-    startDate: "2025-05-28",
-    endDate: "2025-06-04",
-    ordersGained: 7,
-    rating: 4.3,
-    routes: ["MDC - CGK"],
-    revenue: "Rp 310.000",
-    daysLeft: 0,
-    phone: "+62 819-4444-5555",
-    joinDate: "2024-06-10",
-  },
-];
+const BASE_URL = "http://localhost:8000";
 
 
 
@@ -671,6 +491,7 @@ function DetailModal({ traveler, onClose, onSuspend, onActivate }) {
 // ─── BoosterMonitoringPage ────────────────────────────────────────────────────────
 
 function BoosterMonitoringPage() {
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [planFilter, setPlanFilter] = useState("all");
@@ -678,27 +499,193 @@ function BoosterMonitoringPage() {
   const [sortBy, setSortBy] = useState("daysLeft");
   const [sortDir, setSortDir] = useState("asc");
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [data, setData] = useState(travelerBoosters);
-  const [boosterPlans, setBoosterPlans] = useState(initialBoosterPlans);
+  const [data, setData] = useState([]);
+  const [boosterPlans, setBoosterPlans] = useState([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
+  const [showAddPlan, setShowAddPlan] = useState(false);
+  const [addingPlan, setAddingPlan] = useState(false);
+  const [newPlan, setNewPlan] = useState({
+    name: "",
+    price: 0,
+    duration: 7,
+    slots: 5,
+    priority: 1,
+    color: "#22c55e",
+    description: "",
+    active: true,
+  });
 
-  const handlePlanSave = (updatedPlan) => {
-    setBoosterPlans((prev) =>
-      prev.map((p) => (p.id === updatedPlan.id ? updatedPlan : p))
-    );
+  const boosterStats = [
+    {
+      id: 1,
+      label: "Total Booster Aktif",
+      value: data.filter((t) => t.status === "active").length,
+      change: +12,
+      icon: Rocket,
+      color: "primary",
+    },
+    {
+      id: 2,
+      label: "Total Booster",
+      value: data.length,
+      change: +8,
+      icon: Zap,
+      color: "accent",
+    },
+    {
+      id: 3,
+      label: "Pendapatan Booster",
+      value:
+        "Rp " +
+        (
+          boosterPlans.reduce(
+            (sum, p) => sum + (p.count ?? 0) * Number(p.price),
+            0
+          ) / 1_000_000
+        ).toFixed(1) +
+        "Jt",
+      change: +18,
+      icon: TrendingUp,
+      color: "success",
+    },
+    {
+      id: 4,
+      label: "Expired",
+      value: data.filter((t) => t.status === "expired").length,
+      change: -3,
+      icon: Clock,
+      color: "warning",
+    },
+  ];
+
+  const fetchPlans = async () => {
+    setLoadingPlans(true);
+    try {
+      const res = await api.get("/admin/boosters");
+      setBoosterPlans(
+        (res.data.data ?? []).map((b: any) => ({
+          id: b.id,
+          name: b.name,
+          price: Number(b.price),
+          duration: b.duration,
+          slots: b.slots,
+          color: b.color ?? "#22c55e",
+          count: b.traveler_boosters_count ?? 0,
+          active: b.active,
+          description: b.description ?? "",
+        }))
+      );
+    } catch {
+      toast({ title: "Gagal memuat paket booster", variant: "destructive" });
+    } finally {
+      setLoadingPlans(false);
+    }
   };
+
+  const fetchMonitoring = async () => {
+    setLoadingData(true);
+    try {
+      const res = await api.get("/admin/boosters/monitoring");
+      const raw = res.data.data?.data ?? res.data.data ?? [];
+      setData(
+        raw.map((tb: any) => ({
+          id: tb.id,
+          name: tb.traveler?.name ?? "Unknown",
+          avatar: tb.traveler?.photo
+            ? `${BASE_URL}/storage/${tb.traveler.photo}`
+            : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(tb.traveler?.name ?? "user")}`,
+          plan: tb.plan,
+          planColor: tb.plan_color ?? "#22c55e",
+          status: tb.status,
+          startDate: tb.start_date,
+          endDate: tb.end_date,
+          ordersGained: tb.orders_gained ?? 0,
+          rating: tb.traveler?.rating ?? 0,
+          routes: [],
+          daysLeft: tb.days_left ?? 0,
+          phone: tb.traveler?.phone ?? "-",
+          joinDate: tb.traveler?.created_at
+            ? new Date(tb.traveler.created_at).toLocaleDateString("id-ID")
+            : "-",
+        }))
+      );
+    } catch {
+      toast({ title: "Gagal memuat data monitoring", variant: "destructive" });
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  // Create packet booster
+  const handleCreatePlan = async () => {
+    if (!newPlan.name || !newPlan.price) return;
+    setAddingPlan(true);
+    try {
+      await api.post("/admin/boosters", newPlan);
+      toast({ title: "Paket booster berhasil dibuat" });
+      setShowAddPlan(false);
+      setNewPlan({ name: "", price: 0, duration: 7, slots: 5, priority: 1, color: "#22c55e", description: "", active: true });
+      fetchPlans();
+    } catch {
+      toast({ title: "Gagal membuat paket", variant: "destructive" });
+    } finally {
+      setAddingPlan(false);
+    }
+  };
+
+  const handlePlanSave = async (updatedPlan) => {
+    try {
+      if (Object.keys(updatedPlan).length <= 2 && "active" in updatedPlan) {
+        await api.patch(`/admin/boosters/${updatedPlan.id}/toggle`);
+      } else {
+        await api.put(`/admin/boosters/${updatedPlan.id}`, {
+          name: updatedPlan.name,
+          price: updatedPlan.price,
+          duration: updatedPlan.duration,
+          slots: updatedPlan.slots,
+          color: updatedPlan.color,
+          description: updatedPlan.description,
+          active: updatedPlan.active,
+        });
+      }
+      toast({ title: "Paket berhasil diperbarui" });
+      fetchPlans();
+    } catch {
+      toast({ title: "Gagal memperbarui paket", variant: "destructive" });
+    }
+  };
+
+  useEffect(() => {
+    fetchPlans();
+    fetchMonitoring();
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  const handleSuspend = (id) => {
-    setData((prev) => prev.map((t) => (t.id === id ? { ...t, status: "suspended" } : t)));
+  const handleSuspend = async (id) => {
+    try {
+      await api.patch(`/admin/boosters/traveler/${id}/status`, { status: "suspended" });
+      setData((prev) => prev.map((t) => (t.id === id ? { ...t, status: "suspended" } : t)));
+      toast({ title: "Booster berhasil disuspend" });
+    } catch {
+      toast({ title: "Gagal suspend booster", variant: "destructive" });
+    }
   };
 
-  const handleActivate = (id) => {
-    setData((prev) => prev.map((t) => (t.id === id ? { ...t, status: "active" } : t)));
+  const handleActivate = async (id) => {
+    try {
+      await api.patch(`/admin/boosters/traveler/${id}/status`, { status: "active" });
+      setData((prev) => prev.map((t) => (t.id === id ? { ...t, status: "active" } : t)));
+      toast({ title: "Booster berhasil diaktifkan" });
+    } catch {
+      toast({ title: "Gagal mengaktifkan booster", variant: "destructive" });
+    }
   };
+  
 
   const filtered = data
     .filter((t) => {
@@ -742,7 +729,7 @@ function BoosterMonitoringPage() {
     { label: "Sisa Waktu", col: "daysLeft" },
     { label: "Order", col: "ordersGained" },
     { label: "Rating", col: "rating" },
-    { label: "Revenue", col: null },
+    { label: "Order", col: null },
     { label: "Aksi", col: null },
   ];
 
@@ -782,10 +769,7 @@ function BoosterMonitoringPage() {
           >
             <LoaderPinwheel className="h-5 w-5 text-primary" />
           </motion.div>
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors shadow-button">
-            <Download className="h-4 w-4" />
-            Export CSV
-          </button>
+
         </div>
       </motion.div>
 
@@ -810,20 +794,37 @@ function BoosterMonitoringPage() {
               Atur harga, durasi, dan slot order untuk setiap paket booster
             </p>
           </div>
-          <span className="text-xs text-muted-foreground px-2.5 py-1 bg-muted rounded-full font-medium">
-            {boosterPlans.filter((p) => p.active).length} dari {boosterPlans.length} paket aktif
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground px-2.5 py-1 bg-muted rounded-full font-medium">
+              {boosterPlans.filter((p) => p.active).length} dari {boosterPlans.length} paket aktif
+            </span>
+            <button
+              onClick={() => setShowAddPlan(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold bg-primary text-white hover:bg-primary/90 transition-colors shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              Tambah Paket
+            </button>
+          </div>
         </motion.div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {boosterPlans.map((plan, i) => (
-            <PlanEditorCard
-              key={plan.id}
-              plan={plan}
-              index={i}
-              onSave={handlePlanSave}
-            />
-          ))}
-        </div>
+        {loadingPlans ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-64 rounded-2xl bg-muted animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {boosterPlans.map((plan, i) => (
+              <PlanEditorCard
+                key={plan.id}
+                plan={plan}
+                index={i}
+                onSave={handlePlanSave}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Table Section */}
@@ -863,9 +864,9 @@ function BoosterMonitoringPage() {
                 className="px-3 py-2.5 bg-muted/50 border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer transition-all"
               >
                 <option value="all">Semua Paket</option>
-                <option value="Basic Boost">Basic Boost</option>
-                <option value="Pro Boost">Pro Boost</option>
-                <option value="Elite Boost">Elite Boost</option>
+                {boosterPlans.map((p) => (
+                  <option key={p.id} value={p.name}>{p.name}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -939,6 +940,15 @@ function BoosterMonitoringPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
+              {loadingData && (
+                <tr>
+                  <td colSpan={9} className="px-4 py-16 text-center">
+                    <div className="flex justify-center">
+                      <LoaderPinwheel className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  </td>
+                </tr>
+              )}
               <AnimatePresence>
                 {filtered.map((t, i) => {
                   const maxDays =
@@ -1053,9 +1063,11 @@ function BoosterMonitoringPage() {
                         </div>
                       </td>
 
-                      {/* Revenue */}
+                      {/* Order */}
                       <td className="px-4 py-3.5 whitespace-nowrap">
-                        <span className="text-sm font-semibold text-primary">{t.revenue}</span>
+                        <span className="text-sm font-semibold text-primary">
+                          {t.ordersGained} order
+                        </span>
                       </td>
 
                       {/* Aksi */}
@@ -1120,12 +1132,9 @@ function BoosterMonitoringPage() {
         {filtered.length > 0 && (
           <div className="px-5 py-3 border-t border-border bg-muted/20 flex items-center justify-between flex-wrap gap-2">
             <p className="text-xs text-muted-foreground">
-              Total revenue:{" "}
+              Total order:{" "}
               <span className="font-semibold text-foreground">
-                Rp{" "}
-                {filtered
-                  .reduce((acc, t) => acc + parseInt(t.revenue.replace(/[^0-9]/g, ""), 10), 0)
-                  .toLocaleString("id-ID")}
+                {filtered.reduce((acc, t) => acc + t.ordersGained, 0)}
               </span>
             </p>
             <p className="text-xs text-muted-foreground">
@@ -1149,6 +1158,206 @@ function BoosterMonitoringPage() {
           onActivate={handleActivate}
         />
       )}
+
+      {/* DIALOG TAMBAH PAKET BOOSTER */}
+      <AnimatePresence>
+        {showAddPlan && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setShowAddPlan(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Top bar warna */}
+              <div className="h-1.5 w-full" style={{ backgroundColor: newPlan.color }} />
+
+              <div className="p-6">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl" style={{ backgroundColor: newPlan.color + "20" }}>
+                      <Rocket className="h-5 w-5" style={{ color: newPlan.color }} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-lg">Tambah Paket Booster</h3>
+                      <p className="text-xs text-gray-500">Buat paket booster baru untuk traveler</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowAddPlan(false)}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <XCircle className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Nama */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                      <Hash className="h-3 w-3" /> Nama Paket
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="contoh: Premium Boost"
+                      value={newPlan.name}
+                      onChange={(e) => setNewPlan({ ...newPlan, name: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                      style={{ "--tw-ring-color": newPlan.color + "60" } as React.CSSProperties}
+                    />
+                  </div>
+
+                  {/* Harga & Durasi */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                        <Hash className="h-3 w-3" /> Harga (Rp)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="15000"
+                        value={newPlan.price || ""}
+                        onChange={(e) => setNewPlan({ ...newPlan, price: Number(e.target.value) })}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                        <Calendar className="h-3 w-3" /> Durasi (Hari)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="7"
+                        value={newPlan.duration || ""}
+                        onChange={(e) => setNewPlan({ ...newPlan, duration: Number(e.target.value) })}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Slot & Priority */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                        <Layers className="h-3 w-3" /> Maks. Slot
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="5"
+                        value={newPlan.slots || ""}
+                        onChange={(e) => setNewPlan({ ...newPlan, slots: Number(e.target.value) })}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                        <Crown className="h-3 w-3" /> Prioritas
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="1"
+                        value={newPlan.priority || ""}
+                        onChange={(e) => setNewPlan({ ...newPlan, priority: Number(e.target.value) })}
+                        className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Warna */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Warna Tema
+                    </label>
+                    <div className="flex items-center gap-2.5">
+                      <input
+                        type="color"
+                        value={newPlan.color}
+                        onChange={(e) => setNewPlan({ ...newPlan, color: e.target.value })}
+                        className="h-9 w-14 rounded-lg border border-gray-200 cursor-pointer p-0.5 bg-white"
+                      />
+                      <div className="flex items-center gap-2">
+                        {["#22c55e", "#f97316", "#8b5cf6", "#3b82f6", "#ef4444", "#f59e0b"].map(c => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => setNewPlan({ ...newPlan, color: c })}
+                            className="w-8 h-8 rounded-full transition-all hover:scale-110 focus:outline-none"
+                            style={{
+                              backgroundColor: c,
+                              boxShadow: newPlan.color === c ? `0 0 0 3px white, 0 0 0 5px ${c}` : "none",
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Deskripsi */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Deskripsi
+                    </label>
+                    <textarea
+                      placeholder="Deskripsi singkat paket booster..."
+                      rows={2}
+                      value={newPlan.description}
+                      onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Preview */}
+                {newPlan.name && (
+                  <div className="mt-4 p-3 rounded-xl border border-gray-100 bg-gray-50 flex items-center gap-3">
+                    <div className="p-2 rounded-lg" style={{ backgroundColor: newPlan.color + "20" }}>
+                      <Rocket className="h-4 w-4" style={{ color: newPlan.color }} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{newPlan.name}</p>
+                      <p className="text-xs text-gray-500">
+                        Rp {Number(newPlan.price).toLocaleString("id-ID")} • {newPlan.duration} hari • {newPlan.slots} slot
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-3 mt-5">
+                  <button
+                    onClick={() => setShowAddPlan(false)}
+                    className="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-200 transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={handleCreatePlan}
+                    disabled={!newPlan.name || !newPlan.price || addingPlan}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 active:scale-95"
+                    style={{ backgroundColor: newPlan.color }}
+                  >
+                    {addingPlan ? (
+                      <LoaderPinwheel className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    {addingPlan ? "Menyimpan..." : "Buat Paket"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
     </DashboardLayout>
   );

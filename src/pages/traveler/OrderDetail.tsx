@@ -81,7 +81,7 @@ interface OrderDetail {
     updated_total_price: string;
     receipt_photo: string | null;
     price_notes: string | null;
-    status: string;
+    step: string;
   } | null;
 }
 
@@ -133,6 +133,7 @@ export default function TravelerOrderDetail() {
   const [priceForm, setPriceForm] = useState({ itemPrice: "", receiptPhoto: null as File | null, notes: "" });
   const [updatingPrice, setUpdatingPrice] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
+  const cleanPrice = priceForm.itemPrice.replace(/\D/g, "");
 
   // Reject dialog
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -204,22 +205,47 @@ export default function TravelerOrderDetail() {
   // Handle update price (titip-beli)
   const handleUpdatePrice = async () => {
     if (!order || !priceForm.itemPrice || !priceForm.receiptPhoto) return;
+
+    // Validate number
+    const cleanPrice = priceForm.itemPrice.replace(/[^\d]/g, "");
+    if (isNaN(Number(cleanPrice))) {
+      toast({ title: "Harga harus berupa angka", variant: "destructive" });
+      return;
+    }
+
+    // Validate file
+    if (!priceForm.receiptPhoto || !priceForm.receiptPhoto.type.startsWith('image/')) {
+      toast({ title: "File harus berupa gambar", variant: "destructive" });
+      return;
+    }
+
+    if (priceForm.receiptPhoto.size > 2048 * 1024) {
+      toast({ title: "Ukuran file maksimal 2MB", variant: "destructive" });
+      return;
+    }
+
     setUpdatingPrice(true);
     try {
       const form = new FormData();
-      form.append("item_price", priceForm.itemPrice.replace(/\./g, ""));
+      form.append("item_price", cleanPrice);
       form.append("receipt_photo", priceForm.receiptPhoto);
       if (priceForm.notes) form.append("price_notes", priceForm.notes);
 
-      form.append("_method", "PATCH");
+      
       await api.post(`/traveler/orders/${order.id}/price`, form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+
       toast({ title: "Harga berhasil diperbarui" });
+
       setPriceForm({ itemPrice: "", receiptPhoto: null, notes: "" });
       fetchOrder();
     } catch (err: any) {
-      toast({ title: err?.response?.data?.message ?? "Gagal update harga", variant: "destructive" });
+      console.log(err.response?.data);
+      toast({
+        title: err?.response?.data?.message ?? "Gagal update harga",
+        variant: "destructive"
+      });
     } finally {
       setUpdatingPrice(false);
     }
@@ -330,18 +356,7 @@ export default function TravelerOrderDetail() {
               </>
             )}
           </div>
-
-          {order.price_confirmed && !order.paid_at && (
-            <div className="rounded-xl bg-sky-50 border border-sky-200 p-4">
-              <p className="text-sm text-sky-700">Harga sudah dikonfirmasi. Menunggu pembayaran dari customer.</p>
-            </div>
-          )}
-
-          {order.paid_at && (
-            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4">
-              <p className="text-sm text-emerald-700">Customer sudah membayar. Anda bisa mulai mengirim.</p>
-            </div>
-          )}
+          
 
           {/* Penerima (kirim) */}
           {order.order_type === "kirim" && order.recipient_name && (
@@ -548,23 +563,19 @@ export default function TravelerOrderDetail() {
           )}
           {order.status === "on_progress" && (
             <>
-              {order.order_type === "titip-beli" && !order.price_confirmed && (
-                <div className="w-full rounded-xl bg-amber-50 border border-amber-200 p-3">
-                  <p className="text-sm text-amber-700">Update harga barang dan upload struk terlebih dahulu sebelum mulai kirim.</p>
-                </div>
-              )}
-              {order.order_type === "titip-beli" && order.price_confirmed && !order.paid_at && (
+              {(!(order as any).payment || (order as any).payment?.payment_status !== "paid") && (
                 <div className="w-full rounded-xl bg-sky-50 border border-sky-200 p-3">
                   <p className="text-sm text-sky-700">Menunggu pembayaran dari customer sebelum bisa mulai kirim.</p>
                 </div>
               )}
+              {(order as any).payment?.payment_status === "paid" && (
+                <div className="w-full rounded-xl bg-emerald-50 border border-emerald-200 p-3">
+                  <p className="text-sm text-emerald-700">Customer sudah membayar. Anda bisa mulai mengirim.</p>
+                </div>
+              )}
               <Button
                 className="bg-sky-500 hover:bg-sky-600 text-white"
-                disabled={
-                  processing ||
-                  (order.order_type === "titip-beli" && !order.price_confirmed) ||
-                  (order.order_type === "titip-beli" && !order.paid_at)
-                }
+                disabled={processing || !(order as any).payment || (order as any).payment?.payment_status !== "paid"}
                 onClick={() => handleUpdateStatus("on_the_way")}
               >
                 <Truck className="h-4 w-4 mr-1.5" /> Mulai Kirim

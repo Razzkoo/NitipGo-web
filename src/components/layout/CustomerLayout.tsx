@@ -27,8 +27,15 @@ const navLinks = [
   { name: "Beranda", href: "/dashboard", icon: House },
   { name: "Perjalanan", href: "/customer/trip", icon: Plane },
   { name: "Daftar Order", href: "/orders", icon: ShoppingBag },
-  { name: "Riwayat", href: "/history", icon: Clock },
   { name: "Bantuan", href: "/help", icon: HelpCircle },
+];
+
+const mobileBottomNav = [
+  { name: "Beranda", href: "/dashboard", icon: House },
+  { name: "Trip", href: "/customer/trip", icon: Plane },
+  { name: "Order", href: "/orders", icon: ShoppingBag },
+  { name: "Bantuan", href: "/help", icon: HelpCircle },
+  { name: "Profil", href: "/profile", icon: User },
 ];
 
 const BASE_URL = (api.defaults.baseURL ?? "http://localhost:8000/api").replace("/api", "");
@@ -296,10 +303,46 @@ export function CustomerLayout({ children, showFooter = true }: CustomerLayoutPr
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="flex-1 pt-16 md:pt-20"
+        className="flex-1 pt-16 md:pt-20 pb-20 lg:pb-0"
       >
         {children}
       </motion.main>
+
+      {/* ── Mobile Bottom Navigation ── */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border">
+        <div className="flex items-center justify-around px-1 py-1.5">
+          {mobileBottomNav.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                to={item.href}
+                className="flex flex-col items-center gap-0.5 px-3 py-1.5 min-w-0"
+              >
+                <motion.div
+                  animate={{ scale: active ? 1.15 : 1 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  className={cn(
+                    "flex items-center justify-center w-10 h-7 rounded-xl transition-all",
+                    active ? "bg-primary/15" : ""
+                  )}
+                >
+                  <item.icon className={cn(
+                    "h-5 w-5 transition-colors",
+                    active ? "text-primary" : "text-muted-foreground"
+                  )} />
+                </motion.div>
+                <span className={cn(
+                  "text-[10px] font-medium truncate max-w-[56px] text-center",
+                  active ? "text-primary" : "text-muted-foreground"
+                )}>
+                  {item.name}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
 
       {/* ── Footer ── */}
       {showFooter && <Footer />}

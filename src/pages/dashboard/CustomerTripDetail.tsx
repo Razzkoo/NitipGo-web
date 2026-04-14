@@ -146,9 +146,12 @@ export default function CustomerTripDetail() {
                     <p className="text-xl font-bold text-foreground">{trip.from}</p>
                     <p className="text-sm text-muted-foreground">{trip.time}</p>
                   </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                    <ArrowRight className="h-6 w-6 text-primary" />
-                  </div>
+                    <motion.div
+                      animate={{ x: [0, 5, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                      <ArrowRight className="h-5 w-5 text-primary" />
+                    </motion.div>
                   <div className="flex-1 text-center">
                     <p className="text-xs text-muted-foreground mb-1">Ke</p>
                     <p className="text-xl font-bold text-foreground">{trip.to}</p>

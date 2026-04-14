@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { CustomerLayout } from "@/components/layout/CustomerLayout";
 import api from "@/lib/api";
+import fireGif from "@/assets/gif/fire.gif";
 
 interface TripData {
   id: number;
@@ -26,6 +27,9 @@ interface TripData {
   price: string;
   pricePerKg: number;
   notes: string;
+  is_boosted: boolean; 
+  canOrder: boolean;
+  departureAtRaw: string;
   traveler: {
     id: number;
     name: string;
@@ -246,17 +250,26 @@ export default function Trips() {
                     className="group rounded-2xl bg-card p-5 shadow-card transition-all hover:shadow-card-hover"
                   >
                     {/* Traveler Info */}
-                    <div className="mb-4 flex items-center gap-3">
-                      <img
-                        src={getAvatarUrl(trip.traveler)}
-                        alt={trip.traveler.name}
-                        className="h-12 w-12 rounded-full bg-muted object-cover"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-foreground truncate">{trip.traveler.name}</p>
-                        <p className="text-sm text-muted-foreground">{trip.traveler.city}</p>
+                      <div className="mb-4 flex items-center gap-3 relative">
+                        <img
+                          src={getAvatarUrl(trip.traveler)}
+                          alt={trip.traveler.name}
+                          className="h-12 w-12 rounded-full bg-muted object-cover"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-foreground truncate">{trip.traveler.name}</p>
+                          <p className="text-sm text-muted-foreground">{trip.traveler.city}</p>
+                        </div>
+
+                        {trip.is_boosted && (
+                          <div
+                            className="absolute -top-2 -right-1"
+                            style={{ transform: "rotate(15deg)", transformOrigin: "bottom center" }}
+                          >
+                            <img src={fireGif} alt="boosted" className="h-12 w-12 object-contain" />
+                          </div>
+                        )}
                       </div>
-                    </div>
 
                     {/* Route */}
                     <div className="mb-4 flex items-center gap-2 rounded-xl bg-muted/50 p-3">
@@ -264,9 +277,12 @@ export default function Trips() {
                         <p className="text-xs text-muted-foreground">Dari</p>
                         <p className="font-semibold text-foreground">{trip.from}</p>
                       </div>
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                        <ArrowRight className="h-4 w-4 text-primary" />
-                      </div>
+                        <motion.div
+                          animate={{ x: [0, 5, 0] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                          className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                          <ArrowRight className="h-5 w-5 text-primary" />
+                        </motion.div>
                       <div className="flex-1 text-center">
                         <p className="text-xs text-muted-foreground">Ke</p>
                         <p className="font-semibold text-foreground">{trip.to}</p>
@@ -289,10 +305,22 @@ export default function Trips() {
                       <span className="text-lg font-bold text-primary">{trip.price}</span>
                     </div>
 
-                    {/* Action */}
-                    <Button variant="soft" className="w-full" asChild>
-                      <Link to={`/customer/trip/${trip.id}`}>Pilih Traveler</Link>
-                    </Button>
+                    {!trip.canOrder && (
+                      <div className="mb-2 rounded-lg bg-rose-50 border border-rose-200 px-3 py-1.5">
+                        <p className="text-xs text-rose-600 text-center">
+                          Sudah melewati batas waktu pemesanan
+                        </p>
+                      </div>
+                    )}
+                    {trip.canOrder ? (
+                      <Button variant="soft" className="w-full" asChild>
+                        <Link to={`/customer/trip/${trip.id}`}>Pilih Traveler</Link>
+                      </Button>
+                    ) : (
+                      <Button variant="outline" className="w-full" disabled>
+                        Sudah Berangkat
+                      </Button>
+                    )}
                   </motion.div>
                 ))}
               </div>

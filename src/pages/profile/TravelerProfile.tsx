@@ -40,6 +40,7 @@ interface TravelerProfileType {
     total_trips: number;
     total_transactions: number;
     rating: number;
+    total_ratings: number;
     total_withdraw: number;
   } | null;
 }
@@ -62,22 +63,20 @@ export default function TravelerProfile() {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
   const [favoriteRoutes, setFavoriteRoutes] = useState<any[]>([]);
 
-  const reviews = [
-    {
-      id: 1,
-      user: "Budi Santoso",
-      rating: 5,
-      text: "Traveler sangat ramah dan pengiriman cepat.",
-      date: "2 hari lalu",
-    },
-    {
-      id: 2,
-      user: "Siti Aminah",
-      rating: 4,
-      text: "Barang sampai aman, komunikasi baik.",
-      date: "1 minggu lalu",
-    },
-  ];
+  // RATING
+  const [reviews, setReviews] = useState<{
+    id: number;
+    rating: number;
+    review: string | null;
+    customer: string;
+    created_at: string;
+  }[]>([]);
+
+  useEffect(() => {
+    api.get("/traveler/reviews")
+      .then(res => setReviews(res.data.data ?? []))
+      .catch(() => {});
+  }, []);
 
   // Fetch profile
 useEffect(() => {
@@ -330,10 +329,12 @@ useEffect(() => {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-bold">{profile.name}</h2>
-                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/20">
-                    <Star className="h-3 w-3 fill-warning text-warning" />
-                    <span className="text-sm">{profile.stats?.rating ?? 0}</span>
-                  </div>
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/20">
+                      <Star className="h-3 w-3 fill-warning text-warning" />
+                      <span className="text-sm font-medium">
+                        {profile.stats?.rating > 0 ? profile.stats.rating : "Baru"}
+                      </span>
+                    </div>
                 </div>
                 <p className="text-muted-foreground">
                   Bergabung pada {profile.joinDate}
@@ -437,9 +438,24 @@ useEffect(() => {
               </div>
               <div className="rounded-2xl bg-card p-4 shadow-card flex items-center gap-4">
                 <Star className="h-5 w-5 text-accent" />
-                <div>
-                  <p className="text-xl font-bold">{profile.stats.rating}</p>
-                  <p className="text-xs text-muted-foreground">Rating</p>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xl font-bold">{profile.stats.rating || "—"}</p>
+                    {profile.stats.rating > 0 && (
+                      <div className="flex items-center gap-0.5">
+                        {[1,2,3,4,5].map(s => (
+                          <Star key={s} className={`h-3 w-3 ${
+                            s <= Math.round(profile.stats!.rating)
+                              ? "fill-warning text-warning"
+                              : "text-muted-foreground/30"
+                          }`} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Rating ({profile.stats.total_ratings ?? 0} ulasan)
+                  </p>
                 </div>
               </div>
               <div className="rounded-2xl bg-card p-4 shadow-card flex items-center gap-4">
@@ -534,27 +550,44 @@ useEffect(() => {
 
           {/* Reviews */}
           <div className="rounded-2xl bg-card p-6 shadow-card">
-            <h3 className="text-lg font-semibold mb-4">Ulasan Terbaru</h3>
+            <h3 className="text-lg font-semibold mb-4">
+              Ulasan Terbaru
+              {profile.stats?.total_ratings !== undefined && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  ({profile.stats.total_ratings} ulasan)
+                </span>
+              )}
+            </h3>
 
-            <div className="space-y-4">
-              {reviews.map((review) => (
-                <div key={review.id} className="p-3 rounded-xl bg-muted/50">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium">{review.user}</span>
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: review.rating }).map((_, i) => (
-                        <Star key={i} className="h-3 w-3 fill-warning text-warning" />
-                      ))}
+            {reviews.length === 0 ? (
+              <div className="text-center py-8">
+                <Star className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Belum ada ulasan</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {reviews.map((review) => (
+                  <div key={review.id} className="p-3 rounded-xl bg-muted/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-sm">{review.customer}</span>
+                      <div className="flex items-center gap-1">
+                        {[1,2,3,4,5].map(s => (
+                          <Star key={s} className={`h-3 w-3 ${
+                            s <= review.rating
+                              ? "fill-warning text-warning"
+                              : "text-muted-foreground/30"
+                          }`} />
+                        ))}
+                      </div>
                     </div>
+                    {review.review && (
+                      <p className="text-sm text-muted-foreground">{review.review}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">{review.created_at}</p>
                   </div>
-
-                  <p className="text-sm text-muted-foreground">{review.text}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {review.date}
-                  </p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

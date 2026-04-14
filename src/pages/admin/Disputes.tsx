@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import {
   AlertTriangle, CheckCircle, Eye, Clock,
   ChevronRight, User, Package, Calendar,
   Banknote, FileText, MessageSquare, ShieldCheck,
   AlertCircle, XCircle, RotateCcw, ArrowRight,
+  Plane,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import api from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,6 +37,7 @@ type Dispute = {
   resolution?: string;
   decision?: "refund" | "partial_refund" | "release_payment";
   adminNote?: string;
+  travelerNote?: string;
   resolvedAt?: string;
 };
 
@@ -99,12 +102,6 @@ const filterLabels: Record<string, string> = {
   all: "Semua", open: "Baru", in_review: "Ditinjau", resolved: "Selesai"
 };
 
-// ─── Animation variants ───────────────────────────────────────────────────────
-
-const listItem = {
-  hidden: { opacity: 0, y: 10 },
-  show:   { opacity: 1,  y: 0,  transition: { duration: 0.25, ease: "easeOut" } },
-};
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 
@@ -128,7 +125,7 @@ function StatCard({ label, count, icon: Icon, iconBg, iconColor, accentBar }: {
         <div>
           <p className="text-xs text-zinc-400 mb-0.5 uppercase tracking-wide">{label}</p>
           <p className="text-2xl font-bold text-zinc-800 leading-none">
-            <CountUp end={count} duration={1000} />
+            <CountUp key={count} end={count} duration={1000} />
           </p>
         </div>
       </div>
@@ -169,12 +166,21 @@ function DecisionOption({ value, selected, onSelect }: {
   );
 }
 
+// ─── Animation variant ────────────────────────────────────────────────────────
+
+const listItem: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  show:   { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" } },
+};
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function AdminDisputes() {
   const { toast } = useToast();
-  const [disputes, setDisputes]               = useState<Dispute[]>(mockDisputes);
-  const [selectedDispute, setSelectedDispute] = useState<Dispute | null>(null);
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [, setLoading]          = useState(true);
+  const [stats, setStats]       = useState({ open: 0, review: 0, resolved: 0 });
+  const [viewDispute, setViewDispute] = useState<Dispute | null>(null);
   const [resolution, setResolution]           = useState("");
   const [filter, setFilter]                   = useState("all");
   const [decision, setDecision]               = useState<Dispute["decision"]>(undefined);
@@ -182,31 +188,21 @@ export default function AdminDisputes() {
 
   const filteredDisputes = disputes.filter(d => filter === "all" || d.status === filter);
 
-  const handleResolve = () => {
-    if (!selectedDispute || !resolution || !decision) return;
-    const resolvedAt = new Date().toLocaleString("id-ID");
-    setDisputes(disputes.map(d =>
-      d.id === selectedDispute.id
-        ? { ...d, status: "resolved", resolution, decision, adminNote, resolvedAt }
-        : d
-    ));
-    toast({ title: "Dispute Diselesaikan", description: `${selectedDispute.id} telah ditandai selesai.` });
-    setSelectedDispute(null);
-    setResolution("");
-    setDecision(undefined);
-    setAdminNote("");
-  };
+  // fetch 
+  useEffect(() => {
+    fetchDisputes();
+  }, []);
 
-  const handleMarkInReview = (dispute: Dispute) => {
-    setDisputes(disputes.map(d =>
-      d.id === dispute.id ? { ...d, status: "in_review" } : d
-    ));
-    toast({ title: "Status Diperbarui", description: `${dispute.id} sedang ditinjau.` });
+  const fetchDisputes = () => {
+    setLoading(true);
+    api.get("/admin/disputes")
+      .then(res => {
+        setDisputes(res.data.data?.data ?? []);
+        setStats(res.data.stats ?? {});
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   };
-
-  const openCount     = disputes.filter(d => d.status === "open").length;
-  const reviewCount   = disputes.filter(d => d.status === "in_review").length;
-  const resolvedCount = disputes.filter(d => d.status === "resolved").length;
 
   return (
     <DashboardLayout role="admin">
@@ -224,7 +220,7 @@ export default function AdminDisputes() {
                 <AlertTriangle className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold leading-tight">Laporan & Disputes</h1>
+                <h1 className="text-2xl font-bold leading-tight">Disputes</h1>
                 <p className="text-sm text-muted-foreground">Monitoring Laporan & Permasalahan transaksi pengguna</p>
               </div>
             </div>
@@ -233,9 +229,9 @@ export default function AdminDisputes() {
 
         {/* ── STAT CARDS ── */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard label="Baru"     count={openCount}     icon={AlertCircle} iconBg="bg-red-50"     iconColor="text-red-500"     accentBar="bg-red-400" />
-          <StatCard label="Ditinjau" count={reviewCount}   icon={Clock}       iconBg="bg-amber-50"   iconColor="text-amber-500"   accentBar="bg-amber-400" />
-          <StatCard label="Selesai"  count={resolvedCount} icon={CheckCircle} iconBg="bg-emerald-50" iconColor="text-emerald-500" accentBar="bg-emerald-400" />
+          <StatCard label="Baru"     count={stats.open}     icon={AlertCircle} iconBg="bg-red-50"     iconColor="text-red-500"     accentBar="bg-red-400" />
+          <StatCard label="Ditinjau" count={stats.review}   icon={Clock}       iconBg="bg-amber-50"   iconColor="text-amber-500"   accentBar="bg-amber-400" />
+          <StatCard label="Selesai"  count={stats.resolved} icon={CheckCircle} iconBg="bg-emerald-50" iconColor="text-emerald-500" accentBar="bg-emerald-400" />
         </div>
 
         {/* ── FILTER TABS ── */}
@@ -319,7 +315,7 @@ export default function AdminDisputes() {
                               </span>
                               <span className="text-zinc-200">·</span>
                               <span className="inline-flex items-center gap-1.5 text-[11px] text-zinc-400">
-                                <Package className="h-3 w-3" />{dispute.traveler}
+                                <Plane className="h-3 w-3" />{dispute.traveler}
                               </span>
                               <span className="text-zinc-200">·</span>
                               <span className="inline-flex items-center gap-1.5 text-[11px] text-zinc-400">
@@ -331,12 +327,23 @@ export default function AdminDisputes() {
                               </span>
                             </div>
 
+                            {/* Traveler answer — read only */}
+                            {dispute.travelerNote && (
+                              <div className="mt-3 rounded-xl bg-primary/5 border border-primary/20 px-4 py-3">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Plane className="h-3.5 w-3.5 text-primary shrink-0" />
+                                  <p className="text-xs font-semibold text-primary">Jawaban Traveler</p>
+                                </div>
+                                <p className="text-xs text-foreground/80 leading-relaxed pl-5">{dispute.travelerNote}</p>
+                              </div>
+                            )}
+
                             {/* Resolution block */}
                             {dispute.resolution && (
                               <motion.div
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: "auto" }}
-                                className="mt-4 rounded-xl bg-emerald-50 ring-1 ring-emerald-100 p-3.5 space-y-1.5"
+                                className="mt-3 rounded-xl bg-emerald-50 ring-1 ring-emerald-100 p-3.5 space-y-1.5"
                               >
                                 <div className="flex items-center gap-2">
                                   <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
@@ -359,24 +366,13 @@ export default function AdminDisputes() {
 
                           {/* Actions */}
                           <div className="flex flex-row md:flex-col items-center gap-2 shrink-0">
-                            {dispute.status === "open" && (
-                              <button
-                                onClick={() => handleMarkInReview(dispute)}
-                                className="inline-flex items-center gap-1.5 rounded-xl bg-zinc-50 hover:bg-amber-50 border border-zinc-200 hover:border-amber-200 hover:text-amber-700 px-3.5 py-2 text-xs font-semibold text-zinc-600 transition-all"
-                              >
-                                <Eye className="h-3.5 w-3.5" />
-                                Tinjau
-                              </button>
-                            )}
-                            {dispute.status === "in_review" && (
-                              <button
-                                onClick={() => setSelectedDispute(dispute)}
-                                className="inline-flex items-center gap-1.5 rounded-xl bg-primary/10 hover:bg-primary/15 border border-primary/20 text-primary px-3.5 py-2 text-xs font-semibold transition-all"
-                              >
-                                <CheckCircle className="h-3.5 w-3.5" />
-                                Selesaikan
-                              </button>
-                            )}
+                            <button
+                              onClick={() => setViewDispute(dispute)}
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-muted hover:bg-muted/80 border border-border px-3.5 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              Lihat
+                            </button>
                             {dispute.status === "resolved" && (
                               <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 px-3.5 py-2 text-xs font-semibold">
                                 <CheckCircle className="h-3.5 w-3.5" />
@@ -401,112 +397,88 @@ export default function AdminDisputes() {
         )}
 
         {/* ── RESOLVE DIALOG ── */}
-        <Dialog open={!!selectedDispute} onOpenChange={() => {
-          setSelectedDispute(null);
-          setResolution("");
-          setDecision(undefined);
-          setAdminNote("");
-        }}>
-          <DialogContent className="max-w-md w-[calc(100vw-2rem)] p-0 gap-0 rounded-2xl border-zinc-200 shadow-xl flex flex-col max-h-[90vh] sm:max-h-[85vh]">
+        <Dialog open={!!viewDispute} onOpenChange={() => setViewDispute(null)}>
+          <DialogContent className="max-w-md p-0 gap-0 rounded-2xl overflow-hidden">
+            {viewDispute && (() => {
+              const sCfg = statusCfg[viewDispute.status];
+              const pCfg = priorityCfg[viewDispute.priority];
+              return (
+                <div className="overflow-y-auto max-h-[80vh]">
+                  {/* Header */}
+                  <div className="px-5 pt-5 pb-4 border-b border-border/60 bg-muted/20">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <span className="text-xs font-mono text-muted-foreground">{viewDispute.id} · {viewDispute.orderId}</span>
+                    </div>
+                    <h2 className="text-base font-bold text-foreground mb-3">{viewDispute.issue}</h2>
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${sCfg.chip}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${sCfg.dot}`} />{sCfg.label}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${pCfg.chip}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${pCfg.dot}`} />{pCfg.label}
+                      </span>
+                    </div>
+                  </div>
 
-            {/* ── Sticky Header ── */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 bg-white rounded-t-2xl shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  <div className="px-5 py-4 space-y-3">
+                    {/* Info */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Customer</p>
+                        <p className="text-sm font-semibold text-foreground">{viewDispute.customer}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Traveler</p>
+                        <p className="text-sm font-semibold text-foreground">{viewDispute.traveler}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Tanggal</p>
+                        <p className="text-sm font-semibold text-foreground">{viewDispute.date}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Order</p>
+                        <p className="text-sm font-semibold text-foreground">{viewDispute.orderId}</p>
+                      </div>
+                    </div>
+
+                    {/* Deskripsi */}
+                    <div className="rounded-xl bg-muted/40 border border-border/50 px-4 py-3">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">Deskripsi Masalah</p>
+                      <p className="text-sm text-foreground/80 leading-relaxed">{viewDispute.description}</p>
+                    </div>
+
+                    {/* Jawaban traveler */}
+                    {viewDispute.travelerNote && (
+                      <div className="rounded-xl bg-primary/5 border border-primary/20 px-4 py-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Plane className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <p className="text-xs font-semibold text-primary">Jawaban Traveler</p>
+                        </div>
+                        <p className="text-sm text-foreground/80 leading-relaxed pl-5">{viewDispute.travelerNote}</p>
+                      </div>
+                    )}
+
+                    {/* Resolusi jika sudah selesai */}
+                    {viewDispute.status === "resolved" && (
+                      <div className="rounded-xl bg-emerald-50 ring-1 ring-emerald-100 px-4 py-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
+                          <p className="text-sm font-semibold text-emerald-700">Dispute Diselesaikan oleh Traveler</p>
+                        </div>
+                        {viewDispute.resolvedAt && (
+                          <p className="text-[11px] text-emerald-600 pl-6">{viewDispute.resolvedAt}</p>
+                        )}
+                      </div>
+                    )}
+
+                    <button onClick={() => setViewDispute(null)}
+                      className="w-full h-10 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:bg-muted/40 transition">
+                      Tutup
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <DialogTitle className="text-sm font-bold text-zinc-800 leading-tight">
-                    Selesaikan Dispute
-                  </DialogTitle>
-                  <p className="text-[11px] text-zinc-400">{selectedDispute?.id} · {selectedDispute?.orderId}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* ── Scrollable Body ── */}
-            <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
-
-              {/* Dispute summary — compact */}
-              <div className="rounded-xl bg-zinc-50 ring-1 ring-zinc-100 px-4 py-3">
-                <p className="text-xs font-bold text-zinc-700 mb-0.5">{selectedDispute?.issue}</p>
-                <p className="text-[11px] text-zinc-400 leading-relaxed mb-2.5">{selectedDispute?.description}</p>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-2 border-t border-zinc-100">
-                  <span className="inline-flex items-center gap-1 text-[11px] text-zinc-400">
-                    <User className="h-3 w-3" />{selectedDispute?.customer}
-                  </span>
-                  <span className="text-zinc-200">·</span>
-                  <span className="inline-flex items-center gap-1 text-[11px] text-zinc-400">
-                    <Package className="h-3 w-3" />{selectedDispute?.traveler}
-                  </span>
-                  <span className="text-zinc-200">·</span>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-zinc-600">
-                    <Banknote className="h-3 w-3" />{selectedDispute?.amount}
-                  </span>
-                </div>
-              </div>
-
-              {/* Decision selector */}
-              <div>
-                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-2">
-                  Keputusan <span className="text-red-400">*</span>
-                </p>
-                <div className="space-y-1.5">
-                  {(["refund", "partial_refund", "release_payment"] as const).map(v => (
-                    <DecisionOption
-                      key={v}
-                      value={v}
-                      selected={decision === v}
-                      onSelect={() => setDecision(v)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Resolution text */}
-              <div>
-                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide mb-2">
-                  Keterangan Resolusi <span className="text-red-400">*</span>
-                </p>
-                <Textarea
-                  placeholder="Jelaskan solusi yang diberikan kepada kedua pihak..."
-                  value={resolution}
-                  onChange={(e) => setResolution(e.target.value)}
-                  rows={2}
-                  className="text-sm resize-none rounded-xl border-zinc-200 focus:ring-primary/20 bg-zinc-50/50"
-                />
-              </div>
-
-              {/* Admin note */}
-              <div>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Catatan Internal</p>
-                  <span className="text-[10px] text-zinc-400 rounded-full bg-zinc-100 px-2 py-0.5 leading-tight">Tidak terlihat pengguna</span>
-                </div>
-                <Textarea
-                  placeholder="Catatan log internal admin..."
-                  value={adminNote}
-                  onChange={(e) => setAdminNote(e.target.value)}
-                  rows={2}
-                  className="text-sm resize-none rounded-xl border-zinc-200 focus:ring-primary/20 bg-zinc-50/50"
-                />
-              </div>
-            </div>
-
-            {/* ── Sticky Footer ── */}
-            <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-t border-zinc-100 bg-zinc-50/60 rounded-b-2xl shrink-0">
-              
-              <button
-                onClick={handleResolve}
-                disabled={!resolution || !decision}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold
-                  bg-primary text-white hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed
-                  shadow-sm shadow-primary/20 transition-all"
-              >
-                <ShieldCheck className="h-4 w-4" />
-                Kirim & Selesaikan
-              </button>
-            </div>
+              );
+            })()}
           </DialogContent>
         </Dialog>
 
