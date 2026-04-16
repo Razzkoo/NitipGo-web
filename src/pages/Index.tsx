@@ -17,6 +17,7 @@ import { useAppSettings } from "@/components/layout/AppSettingsContent";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
+import fireGif from "@/assets/gif/fire.gif";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,24 @@ interface PackageInfo {
   days: number;
   price: number;
   label: string;
+}
+
+interface TripData {
+  id: number; code: string; from: string; to: string;
+  displayDate: string; departureTime: string;
+  arrivalDate: string | null; arrivalTime: string | null;
+  capacity: string; capacityRaw: number;
+  price: string; is_boosted: boolean; canOrder: boolean;
+  traveler: { id: number; name: string; photo: string | null; city: string; phone: string };
+  pickup:     { name: string; address: string; time: string | null; mapUrl: string | null } | null;
+  collection: { name: string; address: string; time: string | null; mapUrl: string | null } | null;
+}
+
+const BASE_URL = (api.defaults.baseURL ?? "http://localhost:8000/api").replace("/api", "");
+
+function getAvatarUrl(traveler: TripData["traveler"]): string {
+  if (traveler.photo) return `${BASE_URL}/storage/${traveler.photo}`;
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(traveler.name)}`;
 }
 
 // ─── Static Data ─────────────────────────────────────────────────────────────
@@ -739,11 +758,16 @@ export default function Index() {
   const [liveCount, setLiveCount]     = useState(0);
   const [maxSlots]                    = useState(3);
   const [adModalOpen, setAdModalOpen] = useState(false);
+  const [availableTrips, setAvailableTrips] = useState<TripData[]>([]);
 
   useEffect(() => {
     // Fetch live ads
     api.get("/advertisements/live").then(res => {
       if (res.data.data?.length) setLiveAds(res.data.data);
+    }).catch(() => {});
+    //fetch trip
+    api.get("/trips/available").then(res => {
+      setAvailableTrips((res.data.data ?? []).slice(0, 3));
     }).catch(() => {});
 
     // Fetch packages info
@@ -886,7 +910,7 @@ export default function Index() {
         </div>
       </section>
 
-      {/* ── Available Trips ── */}
+     {/* ── Available Trips ── */}
       <section className="py-16 md:py-24">
         <div className="container">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
@@ -895,40 +919,118 @@ export default function Index() {
               <h2 className="text-3xl font-bold md:text-4xl">Perjalanan <span className="text-primary">Tersedia</span></h2>
               <p className="mt-2 text-muted-foreground">Traveler siap membawa barang Anda</p>
             </div>
-            <Button variant="outline" asChild className="mt-4 md:mt-0"><Link to="/perjalanan">Lihat Semua</Link></Button>
+            <Button variant="outline" asChild className="mt-4 md:mt-0">
+              <Link to="/perjalanan">Lihat Semua</Link>
+            </Button>
           </motion.div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {availableTrips.map((trip, i) => (
-              <motion.div key={trip.id} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }} whileHover={{ y: -8, transition: { duration: 0.25 } }}
-                className="group rounded-2xl bg-card p-5 shadow-card hover:shadow-card-hover transition-shadow">
-                <div className="mb-4 flex items-center gap-3">
-                  <img src={trip.avatar} alt={trip.traveler} className="h-12 w-12 rounded-full bg-muted" />
-                  <div className="flex-1">
-                    <p className="font-semibold">{trip.traveler}</p>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Star className="h-4 w-4 fill-warning text-warning" />{trip.rating}<span>•</span>{trip.trips} trip
+
+          {availableTrips.length === 0 ? (
+            // Skeleton loading 3 card
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[1,2,3].map(i => (
+                <div key={i} className="rounded-2xl bg-card p-5 shadow-card animate-pulse">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-12 w-12 rounded-full bg-muted" />
+                    <div className="space-y-2 flex-1">
+                      <div className="h-3 bg-muted rounded w-3/4" />
+                      <div className="h-2.5 bg-muted rounded w-1/2" />
                     </div>
                   </div>
+                  <div className="h-16 bg-muted rounded-xl mb-4" />
+                  <div className="h-3 bg-muted rounded w-full mb-2" />
+                  <div className="h-10 bg-muted rounded-xl" />
                 </div>
-                <div className="mb-4 flex items-center gap-2 rounded-xl bg-muted/50 p-3">
-                  <div className="flex-1 text-center"><p className="text-xs text-muted-foreground">Dari</p><p className="font-semibold">{trip.from}</p></div>
-                  <motion.div animate={{ x: [0, 5, 0] }} transition={{ duration: 1.5, repeat: Infinity }}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                    <ArrowRight className="h-4 w-4 text-primary" />
-                  </motion.div>
-                  <div className="flex-1 text-center"><p className="text-xs text-muted-foreground">Ke</p><p className="font-semibold">{trip.to}</p></div>
-                </div>
-                <div className="flex items-center justify-between text-sm mb-4">
-                  <div><p className="text-muted-foreground">Tanggal</p><p className="font-medium">{trip.date}</p></div>
-                  <div className="text-right"><p className="text-muted-foreground">Kapasitas</p><p className="font-medium text-success">{trip.capacity}</p></div>
-                </div>
-                <Button variant="soft" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors" asChild>
-                  <Link to={`/perjalanan/${trip.id}`}>Lihat Detail</Link>
-                </Button>
-              </motion.div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {availableTrips.map((trip, i) => (
+                <motion.div key={trip.id}
+                  initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: i * 0.1 }}
+                  whileHover={{ y: -8, transition: { duration: 0.25 } }}
+                  className="group relative rounded-2xl bg-card p-5 shadow-card hover:shadow-card-hover transition-shadow overflow-hidden">
+
+                  {trip.is_boosted && (
+                    <div className="absolute inset-0 rounded-2xl ring-2 ring-orange-400/60 pointer-events-none z-10" />
+                  )}
+
+                  {/* Traveler */}
+                  <div className="flex items-center gap-3 mb-4 relative">
+                    <div className="relative shrink-0">
+                      <img src={getAvatarUrl(trip.traveler)} alt={trip.traveler.name}
+                        className="h-12 w-12 rounded-full bg-muted object-cover ring-2 ring-border" />
+                      {trip.is_boosted && (
+                        <img src={fireGif} alt="boosted"
+                          className="absolute -top-3 -right-2 h-8 w-8 object-contain"
+                          style={{ transform: "rotate(15deg)" }} />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-foreground truncate">{trip.traveler.name}</p>
+                      <p className="text-xs text-muted-foreground">{trip.traveler.city}</p>
+                    </div>
+                    {trip.is_boosted && (
+                      <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-600 border border-orange-200">
+                        🔥 Top
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Route */}
+                  <div className="flex items-center gap-2 rounded-xl bg-muted/50 p-3 mb-4">
+                    <div className="flex-1 text-center">
+                      <p className="text-[10px] text-muted-foreground mb-0.5">Dari</p>
+                      <p className="font-bold text-foreground text-sm">{trip.from}</p>
+                    </div>
+                    <motion.div animate={{ x: [0, 5, 0] }} transition={{ duration: 1.5, repeat: Infinity }}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 shrink-0">
+                      <ArrowRight className="h-4 w-4 text-primary" />
+                    </motion.div>
+                    <div className="flex-1 text-center">
+                      <p className="text-[10px] text-muted-foreground mb-0.5">Ke</p>
+                      <p className="font-bold text-foreground text-sm">{trip.to}</p>
+                    </div>
+                  </div>
+
+                  {/* Date & Capacity */}
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div className="rounded-lg bg-muted/40 px-3 py-2">
+                      <p className="text-[10px] text-muted-foreground mb-0.5">Berangkat</p>
+                      <p className="text-xs font-semibold text-foreground">{trip.displayDate}</p>
+                      <p className="text-[10px] text-muted-foreground">{trip.departureTime} WIB</p>
+                    </div>
+                    {trip.arrivalDate ? (
+                      <div className="rounded-lg bg-muted/40 px-3 py-2">
+                        <p className="text-[10px] text-muted-foreground mb-0.5">Estimasi Tiba</p>
+                        <p className="text-xs font-semibold text-foreground">{trip.arrivalDate}</p>
+                        {trip.arrivalTime && <p className="text-[10px] text-muted-foreground">{trip.arrivalTime} WIB</p>}
+                      </div>
+                    ) : (
+                      <div className="rounded-lg bg-muted/40 px-3 py-2 flex flex-col justify-center">
+                        <p className="text-[10px] text-muted-foreground mb-0.5">Kapasitas</p>
+                        <p className={`text-xs font-semibold ${trip.capacityRaw > 0 ? "text-success" : "text-destructive"}`}>
+                          {trip.capacity}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Price */}
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs text-muted-foreground">Mulai dari</span>
+                    <span className="text-lg font-bold text-primary">{trip.price}</span>
+                  </div>
+
+                  <Button variant="soft"
+                    className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                    asChild>
+                    <Link to={`/perjalanan/${trip.id}`}>Lihat Detail</Link>
+                  </Button>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
